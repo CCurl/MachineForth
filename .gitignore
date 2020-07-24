@@ -36,6 +36,12 @@
 *.x86_64
 *.hex
 
+Debug/
+Release/
+.suo
+*.user
+Browse.VC.*
+
 # Debug files
 *.dSYM/
 *.su
@@ -50,3 +56,4 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+.vs/mf/v16/ipch/AutoPCH/229d40149d0eeca2/MF.ipch
