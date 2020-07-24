@@ -1,26 +1,52 @@
 // ------------------------------------------------------------
-// inpsired by these:
-// http://www.ultratechnology.com/mfp21.htm#source
+// This is inpsired by these:
+// http://www.ultratechnology.com/mfp21.htm
 // http://www.ultratechnology.com/aha.htm
 // ------------------------------------------------------------
-
-//#define _CRT_SECURE_NO_DEPRECATE
-//#define _CRT_SECURE_NO_WARNINGS
 
 #include <windows.h> 
 #include <stdio.h>
 #include <ctype.h>
 
+typedef unsigned long CELL;
+typedef unsigned char BYTE;
+
+// Things that would change from usage to usage
+CELL MEM_SZ = (1024 * 1);
+#define MF_SRC "mf.src"
+#define MF_BIN "mf.bin"
+#define DSZ 64		// data stack size (circular)
+#define RSZ 64		// return stack size (circular)
+#define MAX_WORDS 2048
+
+// ------------------------------------------------------------
+// To add functionality:
+// 1. Add an entry to the enum below
+// 2. Create a function that implements the functionality.
+// 3. Add an entry to the array of OPCODE_T records later in the file.
+//    - NOTE: the value in the enum needs to be between NOP and BYE
+// ------------------------------------------------------------
+
+typedef struct {
+	const char *asm_instr;
+	const BYTE opcode;
+	void (*func)();
+} OPCODE_T;
+
+enum {
+	NOP = 0, A, FETCH, STORE, DROP, DUP, SETA, EMIT, INC, DEC,
+	JMP, CALL, RET, ADD, SUB, MULT, DIV, AT_PLUS, STORE_PLUS, PLUS_STAR,
+	OVER, UNTIL, UNTIL_NEG, INVERT, T_EQ_0, C_EQ_0, GOTORC, CLS,
+	LIT, p_COLON, DTOR, RTOD, AND, XOR, TIMES2, DIVIDE2, BYE,
+} OPCODES;
+
+
+// The implementation
 HANDLE hStdout, hStdin;
 CONSOLE_SCREEN_BUFFER_INFO csbi;
 
-char input_fn[256];
-char output_fn[256];
 FILE* input_fp = NULL;
 FILE* output_fp = NULL;
-
-typedef unsigned long CELL;
-typedef unsigned char BYTE;
 
 CELL HERE, STATE = 0;
 CELL BASE = 10;
@@ -30,20 +56,18 @@ CELL BASE = 10;
 CELL PC;
 CELL addr;
 CELL tmp;
-CELL MEM_SZ = (1024 * 1);
 int call_depth = 0;
 
 // Circular stacks - no over/under-flow!
 // - the top of data stack is TOS
 // - the top of return stack is TOSR
 
-#define DSZ 64
+// The stacks
 CELL dstk[DSZ];
 CELL* DSS = dstk;
 CELL* DSE = &(dstk[DSZ - 1]);
 CELL* DSP = dstk;
 
-#define RSZ 64
 CELL rstk[RSZ];
 CELL* RSS = rstk;
 CELL* RSE = &(rstk[RSZ - 1]);
@@ -52,7 +76,6 @@ CELL* RSP = rstk;
 #define TOS  (*DSP)
 #define TOSR (*RSP)
 
-#define MAX_WORDS 2048
 typedef struct {
 	CELL xt;
 	BYTE flags;
@@ -63,7 +86,7 @@ BYTE* the_memory = NULL;
 ENTRY_T* the_dict = NULL;
 int num_words = 0;
 
-void (*prims[64])();
+void (*prims[256])();
 
 int _QUIT_HIT;
 int all_ok = 1;
@@ -399,20 +422,6 @@ void lit()
 	push(*(CELL*)PC);
 	PC += CELL_SZ;
 }
-
-// ------------------------------------------------------------
-typedef struct {
-	const char* asm_instr;
-	const BYTE opcode;
-	void (*func)();
-} OPCODE_T;
-
-enum {
-	NOP = 0, A, FETCH, STORE, DROP, DUP, SETA, EMIT, INC, DEC,
-	JMP, CALL, RET, ADD, SUB, MULT, DIV, AT_PLUS, STORE_PLUS, PLUS_STAR,
-	OVER, UNTIL, UNTIL_NEG, INVERT, T_EQ_0, C_EQ_0, GOTORC, CLS,
-	LIT, p_COLON, DTOR, RTOD, AND, XOR, TIMES2, DIVIDE2, BYE,
-} OPCODES;
 
 OPCODE_T theOpcodes[] = {
 		  { "nop",     NOP,         nop        }
@@ -855,7 +864,7 @@ void compile()
 	doTest();
 	// return;
 
-	fopen_s(&input_fp, input_fn, "rt");
+	fopen_s(&input_fp, MF_SRC, "rt");
 	if (!input_fp)
 	{
 		printf("can't open input file!");
@@ -876,7 +885,7 @@ void compile()
 // *********************************************************************
 void write_output_file()
 {
-	fopen_s(&output_fp, output_fn, "wb");
+	fopen_s(&output_fp, MF_BIN, "wb");
 	if (!output_fp)
 	{
 		printf("ERROR: Can't open output file!");
@@ -886,16 +895,13 @@ void write_output_file()
 	int num = fwrite(the_memory, 1, MEM_SZ, output_fp);
 	fclose(output_fp);
 	output_fp = NULL;
-	printf("\n%s, %d bytes written.\n", output_fn, num);
+	printf("\n%s, %d bytes written.\n", MF_BIN, num);
 }
 
 int main(int argc, char** argv)
 {
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	strcpy_s(input_fn, sizeof(input_fn), "mf.src");
-	strcpy_s(output_fn, sizeof(output_fn), "mf.bin");
 
 	the_memory = (BYTE*)malloc(MEM_SZ);
 	memset(the_memory, 0, MEM_SZ);
