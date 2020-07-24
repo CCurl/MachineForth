@@ -9,7 +9,7 @@ It is exceedingly easy to add primitives and add any desired functionality.
 
 Please refer to this for more information:
 
-http://www.ultratechnology.com/mfp21.htm#source
+http://www.ultratechnology.com/mfp21.htm
 
 It can be built using either Visual Studio 19, or GCC. 
 To build it using GCC, use 'make mf'. This depends on having MinGW installed.
