@@ -30,7 +30,7 @@ CELL BASE = 10;
 CELL PC;
 CELL addr;
 CELL tmp;
-CELL MEM_SZ = (1024 * 4);
+CELL MEM_SZ = (1024 * 1);
 int call_depth = 0;
 
 // Circular stacks - no over/under-flow!
