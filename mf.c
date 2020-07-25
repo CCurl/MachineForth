@@ -52,7 +52,11 @@ CELL BASE = 10;
 #define CELL_SZ 4
 
 // ------------------------------------------------------------
+#ifdef __VS19__
+CELL PC;
+#else
 register CELL PC asm("esi");
+#endif
 CELL addr;
 CELL tmp;
 int call_depth = 0;
