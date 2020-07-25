@@ -38,7 +38,7 @@ typedef struct {
 enum {
 	NOP = 0, A, FETCH, STORE, DROP, DUP, SETA, EMIT, INC, DEC,
 	JMP, CALL, RET, ADD, SUB, MULT, DIV, AT_PLUS, STORE_PLUS, PLUS_STAR,
-	OVER, UNTIL, UNTIL_NEG, INVERT, T_EQ_0, C_EQ_0, GOTORC, CLS,
+	OVER, UNTIL, UNTIL_NEG, INVERT, T_NEQ_0, T_EQ_0, GOTORC, CLS,
 	LIT, p_COLON, DTOR, RTOD, AND, XOR, TIMES2, DIVIDE2, BYE,
 } OPCODES;
 
@@ -197,8 +197,8 @@ OPCODE_T theOpcodes[] = {
 		, { "invert",  INVERT,      }
 		, { "gotoRC",  GOTORC,      }
 		, { "cls",     CLS,         }
-		, { "T=0",     T_EQ_0,      }
-		, { "C=0",     C_EQ_0,      }
+		, { "t=0",     T_EQ_0,      }
+		, { "t!=0",    T_NEQ_0,      }
 		, { "(:)",     p_COLON,     }
 		, { ">r",      DTOR,        }
 		, { "r>",      RTOD,        }
@@ -347,14 +347,14 @@ void run_program(CELL start)
 			printf("-INVERT-");
 			break;
 
-		case T_EQ_0:
+		case T_NEQ_0:
 			if (TOS != 0)
 				PC = CELL_AT(PC);
 			else
 				PC += CELL_SZ;
 			break;
 
-		case C_EQ_0:
+		case T_EQ_0:
 			if (TOS == 0)
 				PC = CELL_AT(PC);
 			else
@@ -582,7 +582,7 @@ char* parseword(char* line, char* word)
 	}
 	if (_stricmp(word, "if") == 0)
 	{
-		CComma(T_EQ_0);
+		CComma(T_NEQ_0);
 		push(HERE);
 		Comma(0xFFFFFFFF);
 		return line;
