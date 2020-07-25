@@ -1,5 +1,6 @@
 \ TEST
 
+64 emit
 : space $20 drop #32 drop %00100000 drop 32 emit ;
 : ok space 'o' emit 'k' emit ;
 : name dup if 1+ then emit ;

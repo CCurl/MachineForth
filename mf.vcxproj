@@ -143,10 +143,13 @@
     <ClCompile Include="mf.c" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="LICENSE" />
+    <None Include="make.bat" />
     <None Include="mf.src">
       <DeploymentContent>true</DeploymentContent>
       <FileType>Text</FileType>
     </None>
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

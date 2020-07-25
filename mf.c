@@ -64,14 +64,14 @@ int call_depth = 0;
 
 // The stacks
 CELL dstk[DSZ];
-CELL* DSS = dstk;
-CELL* DSE = &(dstk[DSZ - 1]);
-CELL* DSP = dstk;
+CELL * DSS = dstk;
+CELL * DSE = &(dstk[DSZ - 1]);
+CELL * DSP = dstk;
 
 CELL rstk[RSZ];
-CELL* RSS = rstk;
-CELL* RSE = &(rstk[RSZ - 1]);
-CELL* RSP = rstk;
+CELL * RSS = rstk;
+CELL * RSE = &(rstk[RSZ - 1]);
+CELL * RSP = rstk;
 
 #define TOS  (*DSP)
 #define TOSR (*RSP)
@@ -90,6 +90,14 @@ void (*prims[256])();
 
 int _QUIT_HIT;
 int all_ok = 1;
+
+#define BYTE_AT(src) (*(BYTE *)(src))
+#define CELL_AT(src) (*(CELL *)(src))
+
+#define get_cell(tgt, val) *(CELL *)(tgt) = val
+#define set_cell(tgt, val) *(CELL *)(tgt) = val
+
+#define CComma(val)  *(BYTE *)(HERE++) = val
 
 #ifndef __VS19__
 void strcpy_s(char* dst, CELL num, const char* src)
@@ -169,7 +177,7 @@ void fetch()
 {
 	printf("\nfetch from %08lx, ", TOS);
 	addr = TOS;
-	TOS = *(CELL*)addr;
+	TOS = *(CELL *)addr;
 	printf("val is %08lx", TOS);
 }
 
@@ -190,7 +198,7 @@ void drop()
 void store()
 {
 	addr = pop();
-	*(CELL*)addr = pop();
+	*(CELL *)addr = pop();
 }
 
 // ------------------------------------------------------------
@@ -202,13 +210,13 @@ void seta()
 // ------------------------------------------------------------
 void jmp()
 {
-	PC = *(CELL*)PC;
+	PC = *(CELL *)PC;
 }
 
 // ------------------------------------------------------------
 void call()
 {
-	CELL tmp = *(CELL*)PC;
+	CELL tmp = *(CELL *)PC;
 	PC += CELL_SZ;
 	rpush(PC);
 	PC = tmp;
@@ -259,13 +267,13 @@ void mdiv()
 // ------------------------------------------------------------
 void at_plus()
 {
-	push(*(CELL*)(addr++));
+	push(*(CELL *)(addr++));
 }
 
 // ------------------------------------------------------------
 void store_plus()
 {
-	*(CELL*)(addr++) = pop();
+	*(CELL *)(addr++) = pop();
 }
 
 // ------------------------------------------------------------
@@ -308,7 +316,7 @@ void invert()
 void t_eq_0()
 {
 	if (TOS != 0)
-		PC = *(CELL*)PC;
+		PC = *(CELL *)PC;
 	else
 		PC += CELL_SZ;
 }
@@ -317,7 +325,7 @@ void t_eq_0()
 void c_eq_0()
 {
 	if (TOS == 0)
-		PC = *(CELL*)PC;
+		PC = *(CELL *)PC;
 	else
 		PC += CELL_SZ;
 }
@@ -382,15 +390,10 @@ void gotoRC()
 {
 	CELL col = pop();
 	CELL row = pop();
-	//    if (GetConsoleScreenBufferInfo(hStdout, &csbi))
-	//	{
 	COORD pos;
 	pos.Y = (short)row;
 	pos.X = (short)col;
-	//csbi.dwCursorPosition.Y = row; 
-	//csbi.dwCursorPosition.X = col; 
 	SetConsoleCursorPosition(hStdout, pos);
-	//s	}
 }
 
 // ------------------------------------------------------------
@@ -419,7 +422,7 @@ void dec()
 // ------------------------------------------------------------
 void lit()
 {
-	push(*(CELL*)PC);
+	push(*(CELL *)PC);
 	PC += CELL_SZ;
 }
 
@@ -517,6 +520,226 @@ void run_word(CELL start)
 // *********************************************************************
 void run_program(CELL start)
 {
+	BYTE IR;
+	call_depth = 1;
+	PC = start;
+	CELL arg1, arg2, arg3;
+
+	while (1)
+	{
+		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
+		IR = BYTE_AT(PC);
+		++PC;
+		switch (IR)
+		{
+		case NOP:
+			break;
+
+		case A:
+			push(addr);
+			break;
+
+		case FETCH:
+			arg1 = CELL_AT(TOS);
+			TOS = arg1;
+			break;
+
+		case STORE:
+			arg1 = pop();
+			arg2 = pop();
+			*(CELL *)arg1 = arg2;
+			break;
+
+		case DROP:
+			arg1 = pop();
+			break;
+
+		case DUP:
+			arg1 = TOS;
+			push(arg1);
+			break;
+
+		case SETA:
+			addr = pop();
+			break;
+
+		case EMIT:
+			arg1 = pop();
+			printf("%c", (arg1 & 0xFF));
+			break;
+
+		case INC:
+			TOS++;
+			break;
+
+		case DEC:
+			TOS--;
+			break;
+
+		case JMP:
+			PC = CELL_AT(PC);
+			break;
+
+		case CALL:
+			arg1 = CELL_AT(PC);
+			PC += CELL_SZ;
+			rpush(PC);
+			PC = arg1;
+			++call_depth;
+			break;
+
+		case RET:
+			PC = rpop();
+			--call_depth;
+			break;
+
+		case ADD:
+			arg1 = pop();
+			TOS += arg1;
+			break;
+
+		case SUB:
+			arg1 = pop();
+			TOS -= arg1;
+			break;
+
+		case MULT:
+			arg1 = pop();
+			TOS *= arg1;
+			break;
+
+		case DIV:
+			arg1 = pop();
+			TOS /= arg1;
+			break;
+
+		case AT_PLUS:
+			push(CELL_AT(addr++));
+			++addr;
+			break;
+
+		case STORE_PLUS:
+			arg1 = pop();
+			CELL_AT(addr) = arg1;
+			++addr;
+			break;
+
+		case PLUS_STAR:
+			arg1 = pop();
+			TOS += arg1;
+			push(99999);
+			break;
+
+		case OVER:
+			arg1 = pop();
+			arg2 = TOS;
+			push(arg1);
+			push(arg2);
+			break;
+
+		case UNTIL:
+			printf("-UNTIL-");
+			break;
+
+		case UNTIL_NEG:
+			printf("-UNTIL_NEG-");
+			break;
+
+		case INVERT:
+			printf("-INVERT-");
+			break;
+
+		case T_EQ_0:
+			if (TOS != 0)
+				PC = CELL_AT(PC);
+			else
+				PC += CELL_SZ;
+			break;
+
+		case C_EQ_0:
+			if (TOS == 0)
+				PC = CELL_AT(PC);
+			else
+				PC += CELL_SZ;
+			break;
+
+		case GOTORC:
+		{
+			COORD pos;
+			arg1 = pop();
+			arg2 = pop();
+			pos.Y = (short)arg2;
+			pos.X = (short)arg1;
+			SetConsoleCursorPosition(hStdout, pos);
+		}
+			break;
+
+		case CLS:
+		{
+			COORD pos = { 0, 0 };
+			GetConsoleScreenBufferInfo(hStdout, &csbi);
+			arg1 = csbi.dwSize.X * csbi.dwSize.Y;
+			FillConsoleOutputCharacter(hStdout, ' ', arg1, pos, &arg2);
+		}
+			break;
+
+		case LIT:
+			arg1 = CELL_AT(PC);
+			push(arg1);
+			PC += CELL_SZ;
+			break;
+
+		case p_COLON:
+			arg1 = pop();
+			TOS += arg1;
+			push(99999);
+			break;
+
+		case DTOR:
+			rpush(pop());
+			break;
+
+		case RTOD:
+			push(rpop());
+			break;
+
+		case AND:
+			arg1 = pop();
+			TOS &= arg1;
+			break;
+
+		case XOR:
+			arg1 = pop();
+			TOS ^= arg1;
+			break;
+
+		case TIMES2:
+			TOS *= 2;
+			break;
+
+		case DIVIDE2:
+			TOS /= 2;
+			break;
+
+		case BYE:
+			call_depth = 0;
+			break;
+
+		default:
+			printf("Unknown IR (%02x) at PC=%08lx.", IR, PC-1);
+			call_depth = 0;
+			break;
+		}
+		if (call_depth < 1)
+		{
+			return;
+		}
+	}
+}
+
+// *********************************************************************
+void run_program1(CELL start)
+{
 	CELL IR;
 	call_depth = 1;
 	PC = start;
@@ -542,20 +765,6 @@ void run_program(CELL start)
 // ------------------------------------------------------------
 // ------------------------------------------------------------
 
-void set_byte(CELL tgt, BYTE val)
-{
-	*(BYTE*)(tgt) = val;
-}
-
-void set_cell(CELL tgt, CELL val)
-{
-	*(CELL*)(tgt) = val;
-}
-
-void CComma(BYTE val)
-{
-	set_byte(HERE++, val);
-}
 
 void Comma(CELL val)
 {
@@ -773,7 +982,8 @@ char* parseword(char* line, char* word)
 		}
 		else
 		{
-			run_word(ep->xt);
+			run_program(ep->xt);
+			// run_word(ep->xt);
 		}
 		return line;
 	}
