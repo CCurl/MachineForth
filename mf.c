@@ -521,15 +521,15 @@ void run_word(CELL start)
 void run_program(CELL start)
 {
 	BYTE IR;
-	call_depth = 1;
-	PC = start;
 	CELL arg1, arg2, arg3;
+
+	PC = start;
+	call_depth = 1;
 
 	while (1)
 	{
 		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
-		IR = BYTE_AT(PC);
-		++PC;
+		IR = BYTE_AT(PC++);
 		switch (IR)
 		{
 		case NOP:
@@ -590,7 +590,8 @@ void run_program(CELL start)
 
 		case RET:
 			PC = rpop();
-			--call_depth;
+			if (--call_depth < 1)
+				return;
 			break;
 
 		case ADD:
@@ -722,43 +723,12 @@ void run_program(CELL start)
 			break;
 
 		case BYE:
-			call_depth = 0;
-			break;
+			return;
 
 		default:
 			printf("Unknown IR (%02x) at PC=%08lx.", IR, PC-1);
-			call_depth = 0;
-			break;
-		}
-		if (call_depth < 1)
-		{
 			return;
 		}
-	}
-}
-
-// *********************************************************************
-void run_program1(CELL start)
-{
-	CELL IR;
-	call_depth = 1;
-	PC = start;
-
-	while (1)
-	{
-		IR = *(BYTE*)(PC++);
-		if ((IR >= NOP) && (IR <= BYE))
-		{
-			prims[IR]();
-		}
-		else
-		{
-			printf("-unknown opcode %02x at 0x%08lx-", IR, PC - 1);
-			return;
-		}
-
-		if (call_depth < 1)
-			return;
 	}
 }
 
@@ -968,7 +938,12 @@ char* parseword(char* line, char* word)
 			if (STATE == 1)
 				CComma(op.opcode);
 			else
-				prims[op.opcode]();
+			{
+				PC = HERE + 10;
+				CELL_AT(PC) = op.opcode;
+				CELL_AT(PC+1) = RET;
+				run_program(PC);
+			}
 			return line;
 		}
 	}
@@ -983,7 +958,6 @@ char* parseword(char* line, char* word)
 		else
 		{
 			run_program(ep->xt);
-			// run_word(ep->xt);
 		}
 		return line;
 	}

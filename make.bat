@@ -4,15 +4,9 @@ if "--%1%--" == "--mf--" goto make-mf
 goto unknown
 
 :make-mf
-set output=mf
-set c-files=mf.c 
-set c-files=%c-files%
-echo making %output% ...
-echo gcc -g -o %output% %c-files%
-rem gcc -g -o %output% %c-files%
-gcc -g -o tmp %c-files%
-strip -o %output%.exe -g -S -d -X tmp.exe
-del tmp.exe
+@echo on
+gcc -g -Ofast -o mf mf.c
+@echo off
 if "--%2%--" == "--1--" mf
 goto done
 
