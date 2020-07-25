@@ -18,6 +18,7 @@ typedef unsigned char BYTE;
 CELL MEM_SZ = (1024 * 1);
 #define MF_SRC "mf.src"
 #define MF_BIN "mf.bin"
+#define MF_INF "mf.txt"
 #define DSZ 64		// data stack size (circular)
 #define RSZ 64		// return stack size (circular)
 #define MAX_WORDS 2048
@@ -38,7 +39,7 @@ typedef struct {
 enum {
 	NOP = 0, A, FETCH, STORE, DROP, DUP, SETA, EMIT, INC, DEC,
 	JMP, CALL, RET, ADD, SUB, MULT, DIV, AT_PLUS, STORE_PLUS, PLUS_STAR,
-	OVER, UNTIL, UNTIL_NEG, INVERT, T_NEQ_0, T_EQ_0, GOTORC, CLS,
+	OVER, UNTIL, UNTIL_NEG, INVERT, T_EQ_0, T_NEQ_0, GOTORC, CLS,
 	LIT, p_COLON, DTOR, RTOD, AND, XOR, TIMES2, DIVIDE2, BYE,
 } OPCODES;
 
@@ -179,9 +180,11 @@ OPCODE_T theOpcodes[] = {
 		, { "drop",    DROP,        }
 		, { "dup",     DUP,         }
 		, { "a!",      SETA,        }
+		, { "emit",    EMIT,        }
+		, { "1+",      INC,         }
+		, { "1-",      DEC,         }
 		, { "jmp",     JMP,         }
 		, { "call",    CALL,        }
-		, { "emit",    EMIT,        }
 		, { ";",       RET,         }
 		, { "ret",     RET,         }
 		, { "+",       ADD,         }
@@ -195,10 +198,12 @@ OPCODE_T theOpcodes[] = {
 		, { "until",   UNTIL,       }
 		, { "-until",  UNTIL_NEG,   }
 		, { "invert",  INVERT,      }
+		, { "t=0",     T_EQ_0,      }
+		, { "t!=0",    T_NEQ_0,     }
 		, { "gotoRC",  GOTORC,      }
 		, { "cls",     CLS,         }
-		, { "t=0",     T_EQ_0,      }
-		, { "t!=0",    T_NEQ_0,      }
+		, { "cls",     CLS,         }
+		, { "lit",     LIT,         }
 		, { "(:)",     p_COLON,     }
 		, { ">r",      DTOR,        }
 		, { "r>",      RTOD,        }
@@ -206,13 +211,9 @@ OPCODE_T theOpcodes[] = {
 		, { "xor",     XOR,         }
 		, { "2*",      TIMES2,      }
 		, { "2/",      DIVIDE2,     }
-		, { "1+",      INC,         }
-		, { "1-",      DEC,         }
-		, { "",        LIT,         }
 		, { "bye",     BYE,         }
 		, { NULL,      0,           }
 };
-
 
 // *********************************************************************
 void run_program(CELL start)
@@ -458,12 +459,12 @@ ENTRY_T* find_word(const char* word)
 	return NULL;
 }
 
-void dump_words()
+void dump_words(FILE *fp)
 {
 	for (int i = num_words; i > 0; i--)
 	{
 		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
-		printf("\n%4d, %08lx, %08lx, %02x, %s", i, (CELL)ep, ep->xt, ep->flags, ep->name);
+		fprintf(fp, "%4d, %08lx, %08lx, %02x, %s\n", i, (CELL)ep, ep->xt, ep->flags, ep->name);
 	}
 }
 
@@ -556,7 +557,7 @@ int is_number(char* word, long* the_num, int base)
 	return 1;
 }
 
-
+int line_num;
 char* parseword(char* line, char* word)
 {
 	if (word[0] == '\\')
@@ -659,7 +660,7 @@ char* parseword(char* line, char* word)
 		}
 		return line;
 	}
-	printf(" ??%s??", word);
+	printf("line #%d, [%s], '%s'??", line_num, line, word);
 	return line;
 }
 
@@ -677,6 +678,7 @@ void parse(char* line)
 
 void doTest()
 {
+	return;
 	// push(5); dup(); gotoRC();
 	printf("memory: 0x%08lX\n", (CELL)the_memory);
 
@@ -724,7 +726,7 @@ void compile()
 		{
 			break;
 		}
-		printf("\n%02x, %-8s", op.opcode, op.asm_instr);
+		// printf("\n%02x, %-8s", op.opcode, op.asm_instr);
 	}
 
 	doTest();
@@ -737,9 +739,11 @@ void compile()
 		exit(1);
 	}
 
+	line_num = 0;
 	char buf[256];
 	while (fgets(buf, 256, input_fp) == buf)
 	{
+		++line_num;
 		parse(buf);
 	}
 
@@ -751,7 +755,37 @@ void compile()
 }
 
 // *********************************************************************
-void write_output_file()
+void write_info_file()
+{
+	fopen_s(&output_fp, MF_INF, "wt");
+	if (!output_fp)
+	{
+		printf("ERROR: Can't open info file!");
+		exit(1);
+	}
+
+	fprintf(output_fp, "Opcodes:\n");
+	fprintf(output_fp, "-----------------------------\n");
+	for (int i = 0; ; i++)
+	{
+		OPCODE_T op = theOpcodes[i];
+		if (op.asm_instr == NULL)
+		{
+			break;
+		}
+		fprintf(output_fp, "%02x, %s\n", op.opcode, op.asm_instr);
+	}
+	fprintf(output_fp, "\nWords:\n");
+	dump_words(output_fp);
+
+	fprintf(output_fp, "\nthe_memory: %08lx\n", the_memory);
+
+	fclose(output_fp);
+	output_fp = NULL;
+}
+
+// *********************************************************************
+void write_bin_file()
 {
 	fopen_s(&output_fp, MF_BIN, "wb");
 	if (!output_fp)
@@ -763,7 +797,7 @@ void write_output_file()
 	int num = fwrite(the_memory, 1, MEM_SZ, output_fp);
 	fclose(output_fp);
 	output_fp = NULL;
-	printf("\n%s, %d bytes written.\n", MF_BIN, num);
+	// printf("\n%s, %d bytes written.\n", MF_BIN, num);
 }
 
 int main(int argc, char** argv)
@@ -781,8 +815,8 @@ int main(int argc, char** argv)
 	memset(the_dict, 0, dict_sz);
 
 	compile();
-	write_output_file();
-	dump_words();
+	write_info_file();
+	write_bin_file();
 	printf("\n");
 
 	CELL st = GetTickCount();
