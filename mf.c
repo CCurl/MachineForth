@@ -94,10 +94,8 @@ int all_ok = 1;
 #define BYTE_AT(src) (*(BYTE *)(src))
 #define CELL_AT(src) (*(CELL *)(src))
 
-#define get_cell(tgt, val) *(CELL *)(tgt) = val
-#define set_cell(tgt, val) *(CELL *)(tgt) = val
-
 #define CComma(val)  *(BYTE *)(HERE++) = val
+#define Comma(val)   *(CELL *)HERE = val; HERE += CELL_SZ
 
 #ifndef __VS19__
 void strcpy_s(char* dst, CELL num, const char* src)
@@ -107,7 +105,6 @@ void strcpy_s(char* dst, CELL num, const char* src)
 		*(dst++) = *(src++);
 	}
 }
-
 
 void fopen_s(FILE** pfp, const char* nm, const char* mode)
 {
@@ -167,355 +164,49 @@ CELL rpop()
 // ------------------------------------------------------------
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-void a()
-{
-	push(addr);
-}
-
-// ------------------------------------------------------------
-void fetch()
-{
-	printf("\nfetch from %08lx, ", TOS);
-	addr = TOS;
-	TOS = *(CELL *)addr;
-	printf("val is %08lx", TOS);
-}
-
-// ------------------------------------------------------------
-void dup()
-{
-	tmp = TOS;
-	push(tmp);
-}
-
-// ------------------------------------------------------------
-void drop()
-{
-	tmp = pop();
-}
-
-// ------------------------------------------------------------
-void store()
-{
-	addr = pop();
-	*(CELL *)addr = pop();
-}
-
-// ------------------------------------------------------------
-void seta()
-{
-	addr = pop();
-}
-
-// ------------------------------------------------------------
-void jmp()
-{
-	PC = *(CELL *)PC;
-}
-
-// ------------------------------------------------------------
-void call()
-{
-	CELL tmp = *(CELL *)PC;
-	PC += CELL_SZ;
-	rpush(PC);
-	PC = tmp;
-	++call_depth;
-}
-
-// ------------------------------------------------------------
-void emit()
-{
-	printf("%c", pop());
-}
-
-// ------------------------------------------------------------
-void ret()
-{
-	--call_depth;
-	PC = rpop();
-}
-
-// ------------------------------------------------------------
-void add()
-{
-	tmp = pop();
-	TOS += tmp;
-}
-
-// ------------------------------------------------------------
-void sub()
-{
-	tmp = pop();
-	TOS -= tmp;
-}
-
-// ------------------------------------------------------------
-void mult()
-{
-	tmp = pop();
-	TOS *= tmp;
-}
-
-// ------------------------------------------------------------
-void mdiv()
-{
-	tmp = pop();
-	TOS /= tmp;
-}
-
-// ------------------------------------------------------------
-void at_plus()
-{
-	push(*(CELL *)(addr++));
-}
-
-// ------------------------------------------------------------
-void store_plus()
-{
-	*(CELL *)(addr++) = pop();
-}
-
-// ------------------------------------------------------------
-void plus_star()
-{
-	// WHAT TO DO HERE
-	return;
-}
-
-// ------------------------------------------------------------
-void over()
-{
-	push(dstk[1]);
-}
-
-// ------------------------------------------------------------
-void until()
-{
-	// WHAT TO DO HERE
-}
-
-void until_neg()
-{
-	// WHAT TO DO HERE
-}
-
-// ------------------------------------------------------------
-void minus_until()
-{
-	// WHAT TO DO HERE
-}
-
-// ------------------------------------------------------------
-void invert()
-{
-	// WHAT TO DO HERE
-}
-
-// ------------------------------------------------------------
-void t_eq_0()
-{
-	if (TOS != 0)
-		PC = *(CELL *)PC;
-	else
-		PC += CELL_SZ;
-}
-
-// ------------------------------------------------------------
-void c_eq_0()
-{
-	if (TOS == 0)
-		PC = *(CELL *)PC;
-	else
-		PC += CELL_SZ;
-}
-
-// ------------------------------------------------------------
-void p_colon()
-{
-	// WHAT TO DO HERE
-}
-
-// ------------------------------------------------------------
-void dtor()
-{
-	rpush(pop());
-}
-
-// ------------------------------------------------------------
-void rtod()
-{
-	push(rpop());
-}
-
-// ------------------------------------------------------------
-void mand()
-{
-	tmp = pop();
-	TOS &= tmp;
-}
-
-// ------------------------------------------------------------
-void mxor()
-{
-	tmp = pop();
-	TOS ^= tmp;
-}
-
-// ------------------------------------------------------------
-void times2()
-{
-	TOS = TOS << 1;
-}
-
-// ------------------------------------------------------------
-void divide2()
-{
-	TOS = TOS >> 1;
-}
-
-// ------------------------------------------------------------
-void cls()
-{
-	CELL dwConSize, sz;
-	COORD pos = { 0, 0 };
-
-	GetConsoleScreenBufferInfo(hStdout, &csbi);
-	dwConSize = csbi.dwSize.X * csbi.dwSize.Y;
-	FillConsoleOutputCharacter(hStdout, ' ', dwConSize, pos, &sz);
-}
-
-// ------------------------------------------------------------
-void gotoRC()
-{
-	CELL col = pop();
-	CELL row = pop();
-	COORD pos;
-	pos.Y = (short)row;
-	pos.X = (short)col;
-	SetConsoleCursorPosition(hStdout, pos);
-}
-
-// ------------------------------------------------------------
-void nop()
-{
-}
-
-// ------------------------------------------------------------
-void bye()
-{
-	call_depth = 0;
-}
-
-// ------------------------------------------------------------
-void inc()
-{
-	(*DSP)++;
-}
-
-// ------------------------------------------------------------
-void dec()
-{
-	(*DSP)--;
-}
-
-// ------------------------------------------------------------
-void lit()
-{
-	push(*(CELL *)PC);
-	PC += CELL_SZ;
-}
 
 OPCODE_T theOpcodes[] = {
-		  { "nop",     NOP,         nop        }
-		, { "a",       A,           a,         }
-		, { "@",       FETCH,       fetch      }
-		, { "!",       STORE,       store      }
-		, { "drop",    DROP,        drop       }
-		, { "dup",     DUP,         dup        }
-		, { "a!",      SETA,        seta       }
-		, { "jmp",     JMP,         jmp        }
-		, { "call",    CALL,        call       }
-		, { "emit",    EMIT,        emit       }
-		, { ";",       RET,         ret        }
-		, { "ret",     RET,         ret        }
-		, { "+",       ADD,         add        }
-		, { "-",       SUB,         sub        }
-		, { "*",       MULT,        mult       }
-		, { "/",       DIV,         mdiv       }
-		, { "@+",      AT_PLUS,     at_plus    }
-		, { "!+",      STORE_PLUS,  store_plus }
-		, { "+*",      PLUS_STAR,   plus_star  }
-		, { "over",    OVER,        over       }
-		, { "until",   UNTIL,       until      }
-		, { "-until",  UNTIL_NEG,   until_neg  }
-		, { "invert",  INVERT,      invert     }
-		, { "gotoRC",  GOTORC,      gotoRC     }
-		, { "cls",     CLS,         cls        }
-		, { "T=0",     T_EQ_0,      t_eq_0     }
-		, { "C=0",     C_EQ_0,      c_eq_0     }
-		, { "(:)",     p_COLON,     p_colon    }
-		, { ">r",      DTOR,        dtor       }
-		, { "r>",      RTOD,        rtod       }
-		, { "and",     AND,         mand       }
-		, { "xor",     XOR,         mxor       }
-		, { "2*",      TIMES2,      times2     }
-		, { "2/",      DIVIDE2,     divide2    }
-		, { "1+",      INC,         inc        }
-		, { "1-",      DEC,         dec        }
-		, { "",        LIT,         lit        }
-		, { "bye",     BYE,         bye        }
-		, { NULL,      0,           NULL              }
+		  { "nop",     NOP,         }
+		, { "a",       A,           }
+		, { "@",       FETCH,       }
+		, { "!",       STORE,       }
+		, { "drop",    DROP,        }
+		, { "dup",     DUP,         }
+		, { "a!",      SETA,        }
+		, { "jmp",     JMP,         }
+		, { "call",    CALL,        }
+		, { "emit",    EMIT,        }
+		, { ";",       RET,         }
+		, { "ret",     RET,         }
+		, { "+",       ADD,         }
+		, { "-",       SUB,         }
+		, { "*",       MULT,        }
+		, { "/",       DIV,         }
+		, { "@+",      AT_PLUS,     }
+		, { "!+",      STORE_PLUS,  }
+		, { "+*",      PLUS_STAR,   }
+		, { "over",    OVER,        }
+		, { "until",   UNTIL,       }
+		, { "-until",  UNTIL_NEG,   }
+		, { "invert",  INVERT,      }
+		, { "gotoRC",  GOTORC,      }
+		, { "cls",     CLS,         }
+		, { "T=0",     T_EQ_0,      }
+		, { "C=0",     C_EQ_0,      }
+		, { "(:)",     p_COLON,     }
+		, { ">r",      DTOR,        }
+		, { "r>",      RTOD,        }
+		, { "and",     AND,         }
+		, { "xor",     XOR,         }
+		, { "2*",      TIMES2,      }
+		, { "2/",      DIVIDE2,     }
+		, { "1+",      INC,         }
+		, { "1-",      DEC,         }
+		, { "",        LIT,         }
+		, { "bye",     BYE,         }
+		, { NULL,      0,           }
 };
 
-
-/*
-NB build this in somehow to enable usage of VT100 ECSAPE sequences to control the screen
-
-	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD dwMode = 0;
-	GetConsoleMode(hOut, &dwMode);
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	SetConsoleMode(hOut, dwMode);
-*/
-
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-
-// *********************************************************************
-void run_word(CELL start)
-{
-	CELL IR, OLD_PC = PC;
-	call_depth = 1;
-	PC = start;
-
-	while (1)
-	{
-		IR = *(BYTE*)(PC++);
-		if (IR == CALL)
-		{
-			++call_depth;
-		}
-		if (IR == RET)
-		{
-			if (--call_depth < 1)
-			{
-				PC = OLD_PC;
-				return;
-			}
-		}
-		if ((IR >= NOP) && (IR <= BYE))
-		{
-			prims[IR]();
-		}
-		else
-		{
-			printf("-unknown opcode %d at 0x%08lx-", IR, PC);
-			PC = OLD_PC;
-			return;
-		}
-	}
-}
 
 // *********************************************************************
 void run_program(CELL start)
@@ -734,18 +425,6 @@ void run_program(CELL start)
 
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-
-
-void Comma(CELL val)
-{
-	push(val);
-	push(HERE);
-	store();
-	HERE += CELL_SZ;
-}
-
-// ------------------------------------------------------------
-// ------------------------------------------------------------
 // ------------------------------------------------------------
 void define_word(char* word)
 {
@@ -904,7 +583,8 @@ char* parseword(char* line, char* word)
 	}
 	if (_stricmp(word, "then") == 0)
 	{
-		set_cell(pop(), HERE);
+		tmp = pop();
+		CELL_AT(tmp) = HERE;
 		return line;
 	}
 	if (_stricmp(word, "begin") == 0)
@@ -992,9 +672,6 @@ void parse(char* line)
 void doTest()
 {
 	// push(5); dup(); gotoRC();
-	push(' '); emit();
-	push('O'); emit(); push('K'); emit();
-	push('\n'); emit();
 	printf("memory: 0x%08lX\n", (CELL)the_memory);
 
 	// CELL stop = 1000 * 1000 * 500;
@@ -1060,7 +737,9 @@ void compile()
 	{
 		parse(buf);
 	}
-	set_cell((CELL)&the_memory[1], the_dict[num_words].xt);
+
+	// printf(".got-here.");
+	CELL_AT(the_memory + 1) = the_dict[num_words].xt;
 
 	fclose(input_fp);
 	input_fp = NULL;
