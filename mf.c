@@ -30,7 +30,6 @@ CELL MEM_SZ = (1024 * 1);
 typedef struct {
 	const char *asm_instr;
 	const BYTE opcode;
-	void (*func)();
 } OPCODE_T;
 
 enum {
@@ -53,7 +52,7 @@ CELL BASE = 10;
 #define CELL_SZ 4
 
 // ------------------------------------------------------------
-CELL PC;
+register CELL PC asm("esi");
 CELL addr;
 CELL tmp;
 int call_depth = 0;
@@ -85,8 +84,6 @@ typedef struct {
 BYTE* the_memory = NULL;
 ENTRY_T* the_dict = NULL;
 int num_words = 0;
-
-void (*prims[256])();
 
 int _QUIT_HIT;
 int all_ok = 1;
@@ -718,8 +715,7 @@ void compile()
 		{
 			break;
 		}
-		prims[op.opcode] = op.func;
-		printf("\n%02x, %-8s, %08lx", op.opcode, op.asm_instr, (CELL)op.func);
+		printf("\n%02x, %-8s", op.opcode, op.asm_instr);
 	}
 
 	doTest();

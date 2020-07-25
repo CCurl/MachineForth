@@ -5,6 +5,7 @@ goto unknown
 
 :make-mf
 @echo on
+gcc -g -Ofast -S -fverbose-asm mf.c
 gcc -g -Ofast -o mf mf.c
 @echo off
 if "--%2%--" == "--1--" mf
