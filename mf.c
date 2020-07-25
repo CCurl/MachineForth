@@ -3,6 +3,9 @@
 // http://www.ultratechnology.com/mfp21.htm
 // http://www.ultratechnology.com/aha.htm
 // ------------------------------------------------------------
+// To build      : gcc -g -Ofast -o mf mf.c
+// To see the asm: gcc -g -Ofast -S -fverbose-asm mf.c
+// ------------------------------------------------------------
 
 #include <windows.h> 
 #include <stdio.h>
