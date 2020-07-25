@@ -817,14 +817,14 @@ int main(int argc, char** argv)
 	compile();
 	write_info_file();
 	write_bin_file();
-	printf("\n");
+	// printf("\n");
 
-	CELL st = GetTickCount();
 	if (all_ok)
+	{
+		CELL st = GetTickCount();
 		run_program((CELL)the_memory);
-	CELL ee = GetTickCount();
-	CELL tt = ee - st;
-	printf(" %d.%03d seconds\n", tt / 1000, tt % 1000);
-
+		CELL tt = GetTickCount() - st;
+		printf("program ran for %d.%03d seconds\n", tt / 1000, tt % 1000);
+	}
 	return 0;
 }

@@ -103,6 +103,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;__VS19__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,11 +147,17 @@
   <ItemGroup>
     <None Include="LICENSE" />
     <None Include="make.bat" />
+    <None Include="mf.s">
+      <FileType>Text</FileType>
+    </None>
     <None Include="mf.src">
       <DeploymentContent>true</DeploymentContent>
       <FileType>Text</FileType>
     </None>
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="mf.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
