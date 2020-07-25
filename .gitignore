@@ -41,8 +41,6 @@ Release/
 .suo
 *.user
 Browse.VC.*
-*.bin
-*.s
 
 # Debug files
 *.dSYM/
@@ -59,3 +57,8 @@ Module.symvers
 Mkfile.old
 dkms.conf
 *.ipch
+
+# mf specific
+mf.bin
+mf.s
+mf.txt
