@@ -54,9 +54,12 @@ CELL BASE = 10;
 // ------------------------------------------------------------
 #ifdef __VS19__
 CELL PC;
+CELL *DSP;
 #else
 register CELL PC asm("esi");
+register CELL *DSP asm("edi");
 #endif
+
 CELL addr;
 CELL tmp;
 int call_depth = 0;
@@ -67,14 +70,13 @@ int call_depth = 0;
 
 // The stacks
 CELL dstk[DSZ];
-CELL * DSS = dstk;
-CELL * DSE = &(dstk[DSZ - 1]);
-CELL * DSP = dstk;
+CELL *DSS = dstk;
+CELL *DSE = &(dstk[DSZ - 1]);
 
 CELL rstk[RSZ];
-CELL * RSS = rstk;
-CELL * RSE = &(rstk[RSZ - 1]);
-CELL * RSP = rstk;
+CELL *RSS = rstk;
+CELL *RSE = &(rstk[RSZ - 1]);
+CELL *RSP = rstk;
 
 #define TOS  (*DSP)
 #define TOSR (*RSP)
@@ -765,6 +767,8 @@ int main(int argc, char** argv)
 {
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	DSP = dstk;
 
 	the_memory = (BYTE*)malloc(MEM_SZ);
 	memset(the_memory, 0, MEM_SZ);
