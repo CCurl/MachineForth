@@ -1,9 +1,29 @@
 \ TEST
 
-64 emit
+'h' emit 'i' emit
 : space #32 emit ;
 : cr #13 emit #10 emit ;
 : ok space 'o' emit 'k' emit cr ;
 : test 1000 1000 * 500 * begin 1- if drop ret then again ;
 : .t 't' emit 'e' emit 's' emit 't' emit '.' dup dup emit emit emit ;
 : main ok .t test ok ;
+
+: loc @ H ! ;
+: 2, , , ;
+
+: org dup . cr H ! ;
+
+
+
+enum {
+	NOP = 0, 
+	SETA, A, AFETCH, ASTORE, 
+	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
+	LIT, DUP, DROP, OVER,
+	EMIT, GOTORC, CLS, INC, DEC, HA,
+	CCALL, CRET, CALL, RET, JMP, JMPZ, JNZ,
+	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, UNTIL_NEG,
+	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
+	DTOR, RTOD, AND, XOR,
+	BYE,
+} OPCODES;

@@ -37,10 +37,16 @@ typedef struct {
 } OPCODE_T;
 
 enum {
-	NOP = 0, A, FETCH, STORE, DROP, DUP, SETA, EMIT, INC, DEC,
-	JMP, CALL, RET, ADD, SUB, MULT, DIV, AT_PLUS, STORE_PLUS, PLUS_STAR,
-	OVER, UNTIL, UNTIL_NEG, INVERT, T_EQ_0, T_NEQ_0, GOTORC, CLS,
-	LIT, p_COLON, DTOR, RTOD, AND, XOR, TIMES2, DIVIDE2, BYE,
+	NOP = 0, 
+	SETA, A, AFETCH, ASTORE, 
+	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
+	LIT, DUP, DROP, OVER,
+	EMIT, GOTORC, CLS, INC, DEC, HA,
+	CCALL, CRET, CALL, RET, JMP, JMPZ, JNZ,
+	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, UNTIL_NEG,
+	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
+	DTOR, RTOD, AND, XOR,
+	BYE,
 } OPCODES;
 
 
@@ -174,43 +180,49 @@ CELL rpop()
 
 OPCODE_T theOpcodes[] = {
 		  { "nop",     NOP,         }
+		, { ">a",      SETA,        }
 		, { "a",       A,           }
-		, { "@",       FETCH,       }
-		, { "!",       STORE,       }
-		, { "drop",    DROP,        }
+		, { "a@",      AFETCH,      }
+		, { "a!",      ASTORE,      }
+		, { "@+",      AT_PLUS,     }
+		, { "!+",      STORE_PLUS,  }
+		, { "@+1",     AT_PLUS1,    }
+		, { "!+1",     STORE_PLUS1, }
+		, { "lit",     LIT,         }
 		, { "dup",     DUP,         }
-		, { "a!",      SETA,        }
+		, { "drop",    DROP,        }
+		, { "over",    OVER,        }
 		, { "emit",    EMIT,        }
+		, { "gotoRC",  GOTORC,      }
+		, { "cls",     CLS,         }
 		, { "1+",      INC,         }
 		, { "1-",      DEC,         }
-		, { "jmp",     JMP,         }
-		, { "call",    CALL,        }
+		, { "(h)",     HA,          }
+		, { "call",    CCALL,       }
+		, { "ret",     CRET,        }
+		, { "(call)",  CALL,        }
 		, { ";",       RET,         }
-		, { "ret",     RET,         }
+		, { "jmp",     JMP,         }
+		, { "jmpz",    JMPZ,        }
+		, { "jnz",     JNZ,         }
+		, { "if",      IF,          }
+		, { "else",    ELSE,        }
+		, { "then",    THEN,        }
+		, { "begin",   BEGIN,       }
+		, { "until",   UNTIL,       }
+		, { "-until",  UNTIL_NEG,   }
+		, { "again",   THEN,        }
 		, { "+",       ADD,         }
 		, { "-",       SUB,         }
 		, { "*",       MULT,        }
 		, { "/",       DIV,         }
-		, { "@+",      AT_PLUS,     }
-		, { "!+",      STORE_PLUS,  }
+		, { "2*",      TIMES2,      }
+		, { "2/",      DIVIDE2,     }
 		, { "+*",      PLUS_STAR,   }
-		, { "over",    OVER,        }
-		, { "until",   UNTIL,       }
-		, { "-until",  UNTIL_NEG,   }
-		, { "invert",  INVERT,      }
-		, { "t=0",     T_EQ_0,      }
-		, { "t!=0",    T_NEQ_0,     }
-		, { "gotoRC",  GOTORC,      }
-		, { "cls",     CLS,         }
-		, { "cls",     CLS,         }
-		, { "lit",     LIT,         }
-		, { "(:)",     p_COLON,     }
 		, { ">r",      DTOR,        }
 		, { "r>",      RTOD,        }
 		, { "and",     AND,         }
 		, { "xor",     XOR,         }
-		, { "2*",      TIMES2,      }
-		, { "2/",      DIVIDE2,     }
 		, { "bye",     BYE,         }
 		, { NULL,      0,           }
 };
@@ -219,7 +231,7 @@ OPCODE_T theOpcodes[] = {
 void run_program(CELL start)
 {
 	BYTE IR;
-	CELL arg1, arg2, arg3;
+	CELL reg1, reg2, reg3;
 
 	PC = start;
 	call_depth = 1;
@@ -233,193 +245,243 @@ void run_program(CELL start)
 		case NOP:
 			break;
 
-		case A:
-			push(addr);
-			break;
-
-		case FETCH:
-			arg1 = CELL_AT(TOS);
-			TOS = arg1;
-			break;
-
-		case STORE:
-			arg1 = pop();
-			arg2 = pop();
-			*(CELL *)arg1 = arg2;
-			break;
-
-		case DROP:
-			arg1 = pop();
-			break;
-
-		case DUP:
-			arg1 = TOS;
-			push(arg1);
-			break;
-
+		// usage: ( -- a ) - sets current address
 		case SETA:
 			addr = pop();
 			break;
 
-		case EMIT:
-			arg1 = pop();
-			printf("%c", (arg1 & 0xFF));
+		// usage: ( -- a ) - current address
+		case A:
+			push(addr);
 			break;
 
+		// usage: ( -- n ) - fetch cell from current address
+		case AFETCH:
+			reg1 = CELL_AT(addr);
+			push(reg1);
+			break;
+
+		// usage: ( n -- ) - store TOS cell to current address
+		case ASTORE:
+			reg1 = pop();
+			CELL_AT(addr) = reg1;
+			break;
+
+		// usage: ( n -- )
+		case DROP:
+			reg1 = pop();
+			break;
+
+		// usage: ( n -- n n ) - dups TOS
+		case DUP:
+			reg1 = TOS;
+			push(reg1);
+			break;
+
+		// usage: ( c -- ) - prints char to  screen
+		case EMIT:
+			reg1 = pop();
+			printf("%c", (reg1 & 0xFF));
+			break;
+
+		// usage: ( n -- n+1 ) - increments TOS
 		case INC:
 			TOS++;
 			break;
 
+		// usage: ( n -- n-1 ) - decrements TOS
 		case DEC:
 			TOS--;
 			break;
 
+		// usage: ( -- a ) - push next code address
+		case HA:
+			push(&HERE);
+			break;
+
+		// usage: ( -- ) - jumps to (PC)
 		case JMP:
 			PC = CELL_AT(PC);
 			break;
 
+		// usage: ( -- ) - calls subroutine at (PC)
 		case CALL:
-			arg1 = CELL_AT(PC);
+			reg1 = CELL_AT(PC);
 			PC += CELL_SZ;
 			rpush(PC);
-			PC = arg1;
+			PC = reg1;
 			++call_depth;
 			break;
 
+		// usage: ( -- ) - return from subroutine
 		case RET:
 			PC = rpop();
 			if (--call_depth < 1)
 				return;
 			break;
 
+		// usage: ( n1 n2 -- n1+n2 ) - adds n1 and n2
 		case ADD:
-			arg1 = pop();
-			TOS += arg1;
+			reg1 = pop();
+			TOS += reg1;
 			break;
 
+		// usage: ( n1 n2 -- n1-n2 ) - subtracts n2 from n1
 		case SUB:
-			arg1 = pop();
-			TOS -= arg1;
+			reg1 = pop();
+			TOS -= reg1;
 			break;
 
+		// usage: ( n1 n2 -- n1*n2 ) - multiplies n1 and n2
 		case MULT:
-			arg1 = pop();
-			TOS *= arg1;
+			reg1 = pop();
+			TOS *= reg1;
 			break;
 
+		// usage: ( n1 n2 -- n1/n2 ) - divides n1 by n2
 		case DIV:
-			arg1 = pop();
-			TOS /= arg1;
+			reg1 = pop();
+			TOS /= reg1;
 			break;
 
+		// usage: ( -- n ) - a@, increment a by CELL
 		case AT_PLUS:
-			push(CELL_AT(addr++));
-			++addr;
+			reg1 = CELL_AT(addr);
+			push(reg1);
+			addr += CELL_SZ;
 			break;
 
+		// usage: ( n -- ) - a!, increment a by CELL
 		case STORE_PLUS:
-			arg1 = pop();
-			CELL_AT(addr) = arg1;
+			reg1 = pop();
+			CELL_AT(addr) = reg1;
 			++addr;
 			break;
 
+		// usage: ( n1 n2  -- n ) - ???
 		case PLUS_STAR:
-			arg1 = pop();
-			TOS += arg1;
+			reg1 = pop();
+			TOS += reg1;
 			push(99999);
 			break;
 
+		// usage: ( n1 n2 -- n1 n2 n1 ) - standard OVER
 		case OVER:
-			arg1 = pop();
-			arg2 = TOS;
-			push(arg1);
-			push(arg2);
+			reg1 = pop();
+			reg2 = TOS;
+			push(reg1);
+			push(reg2);
 			break;
 
+		// usage: ( -- a ) - MACRO: push HERE
+		case BEGIN:
+			push(HERE);
+			break;
+
+		// usage: ( a -- ) - MACRO: compile if TOS=false, jump to a
 		case UNTIL:
-			printf("-UNTIL-");
+			reg1 = pop();
+			CComma(JNZ);
+			Comma(reg1);
 			break;
 
+		// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
 		case UNTIL_NEG:
-			printf("-UNTIL_NEG-");
+			reg1 = pop();
+			CComma(JMPZ);
+			Comma(reg1);
 			break;
 
+		// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
+		case AGAIN:
+			reg1 = pop();
+			CComma(JMP);
+			Comma(reg1);
+			break;
+
+		// usage: ??
 		case INVERT:
 			printf("-INVERT-");
 			break;
 
-		case T_NEQ_0:
-			if (TOS != 0)
-				PC = CELL_AT(PC);
-			else
-				PC += CELL_SZ;
-			break;
-
-		case T_EQ_0:
+		// usage: ( f -- f ) - if TOS=0, jump
+		case JMPZ:
 			if (TOS == 0)
 				PC = CELL_AT(PC);
 			else
 				PC += CELL_SZ;
 			break;
 
+		// usage: ( -- ) - if TOS!=0, jump
+		case JNZ:
+			if (TOS != 0)
+				PC = CELL_AT(PC);
+			else
+				PC += CELL_SZ;
+			break;
+
+		// usage: ( r c -- ) - move cursor to screen pos (r,c)
 		case GOTORC:
 		{
 			COORD pos;
-			arg1 = pop();
-			arg2 = pop();
-			pos.Y = (short)arg2;
-			pos.X = (short)arg1;
+			reg1 = pop();
+			reg2 = pop();
+			pos.Y = (short)reg2;
+			pos.X = (short)reg1;
 			SetConsoleCursorPosition(hStdout, pos);
 		}
 			break;
 
+		// usage: ( -- ) - clears the screen, moces cursor to (0,0)
 		case CLS:
 		{
 			COORD pos = { 0, 0 };
 			GetConsoleScreenBufferInfo(hStdout, &csbi);
-			arg1 = csbi.dwSize.X * csbi.dwSize.Y;
-			FillConsoleOutputCharacter(hStdout, ' ', arg1, pos, &arg2);
+			reg1 = csbi.dwSize.X * csbi.dwSize.Y;
+			FillConsoleOutputCharacter(hStdout, ' ', reg1, pos, &reg2);
 		}
 			break;
 
+		// usage: ( -- n ) - pushed n onto the stack
 		case LIT:
-			arg1 = CELL_AT(PC);
-			push(arg1);
+			reg1 = CELL_AT(PC);
+			push(reg1);
 			PC += CELL_SZ;
 			break;
 
-		case p_COLON:
-			arg1 = pop();
-			TOS += arg1;
-			push(99999);
-			break;
-
+		// usage: ( D:n -- R:n ) - moves TOS to return stack
 		case DTOR:
 			rpush(pop());
 			break;
 
+		// usage: ( R:n -- D:n ) - moves return stack TOS to data stack
 		case RTOD:
 			push(rpop());
 			break;
 
+		// usage: ( n1 n2 -- n1&n2 ) - bitwise AND
 		case AND:
-			arg1 = pop();
-			TOS &= arg1;
+			reg1 = pop();
+			TOS &= reg1;
 			break;
 
+		// usage: ( n1 n2 -- n1^n2 ) - bitwise XOR
 		case XOR:
-			arg1 = pop();
-			TOS ^= arg1;
+			reg1 = pop();
+			TOS ^= reg1;
 			break;
 
+		// usage: ( n1 -- n1*2 ) - multiply TOS by 2
 		case TIMES2:
 			TOS *= 2;
 			break;
 
+		// usage: ( n1 -- n1/2 ) - divide TOS by 2
 		case DIVIDE2:
 			TOS /= 2;
 			break;
 
+		// usage: ( -- ) - breaks out of loop
 		case BYE:
 			return;
 
@@ -565,6 +627,34 @@ char* parseword(char* line, char* word)
 		*line = 0;
 		return line;
 	}
+	if (_stricmp(word, "variable") == 0)
+	{
+		// [lit] [cell]    [ret] [val]
+		// 100    101-104   105   106
+		line = getword(line, word);
+		if (strlen(word) > 0)
+		{
+			define_word(word);
+			CComma(LIT);
+			Comma(HERE+5);
+			CComma(RET);
+			Comma(0);
+		}
+		return line;
+	}
+	if (_stricmp(word, "const") == 0)
+	{
+		line = getword(line, word);
+		if (strlen(word) > 0)
+		{
+			define_word(word);
+			tmp = pop();
+			CComma(LIT);
+			Comma(tmp);
+			CComma(RET);
+		}
+		return line;
+	}
 	if (_stricmp(word, ":") == 0)
 	{
 		line = getword(line, word);
@@ -581,9 +671,15 @@ char* parseword(char* line, char* word)
 		STATE = 0;
 		return line;
 	}
+	if (_stricmp(word, ";-") == 0)
+	{
+		CComma(RET);
+		STATE = 0;
+		return line;
+	}
 	if (_stricmp(word, "if") == 0)
 	{
-		CComma(T_NEQ_0);
+		CComma(JNZ);
 		push(HERE);
 		Comma(0xFFFFFFFF);
 		return line;
