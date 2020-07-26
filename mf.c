@@ -247,7 +247,7 @@ void run_program(CELL start)
 
 	while (1)
 	{
-		printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
+		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
 		IR = BYTE_AT(PC++);
 		switch (IR)
 		{
@@ -264,43 +264,43 @@ void run_program(CELL start)
 			push(addr);
 			break;
 
-		// usage: ( -- n ) - fetch cell from current address
+		// usage: ( -- n ) - a@, fetch CELL at current address
 		case AFETCH:
 			reg1 = CELL_AT(addr);
 			push(reg1);
 			break;
 
-		// usage: ( n -- ) - store TOS cell to current address
+		// usage: ( n -- ) - store TOS to current address pointer
 		case ASTORE:
 			reg1 = pop();
 			CELL_AT(addr) = reg1;
 			break;
 
-		// usage: ( -- n ) - a@, increment a by CELL
+		// usage: ( -- n ) - a@, fetch CELL, increment a by CELL
 		case AT_PLUS:
 			reg1 = CELL_AT(addr);
 			push(reg1);
 			addr += CELL_SZ;
 			break;
 
-		// usage: ( n -- ) - a!, increment a by CELL
+		// usage: ( n -- ) - a!, store CELL, increment a by CELL
 		case STORE_PLUS:
 			reg1 = pop();
 			CELL_AT(addr) = reg1;
 			addr += CELL_SZ;
 			break;
 
-		// usage: ( -- n ) - a@, increment a by CELL
+		// usage: ( -- n ) - fetch BYTE at a@, increment a by 1
 		case AT_PLUS1:
 			reg1 = BYTE_AT(addr);
 			push(reg1);
 			++addr;
 			break;
 
-		// usage: ( n -- ) - a!, increment a by CELL
+		// usage: ( n -- ) - store BYTE to a!, increment a by 1
 		case STORE_PLUS1:
 			reg1 = pop();
-			BYTE_AT(addr) = reg1;
+			BYTE_AT(addr) = (BYTE)reg1;
 			++addr;
 			break;
 
@@ -433,14 +433,14 @@ void run_program(CELL start)
 		// usage: ( -- a ) - MACRO: if (jmpz placeholder)
 		case IF:
 			CComma(JMPZ);
-			printf("*if*%08lx*", HERE);
+			// printf("*if*%08lx*", HERE);
 			push(HERE);
 			Comma(0);
 			break;
 
 		// usage: ( -- a ) - MACRO: else ()
 		case ELSE:
-			printf("*else*");
+			// printf("*else*");
 			reg1 = pop();
 			CComma(JMP);
 			push(HERE);
@@ -451,7 +451,7 @@ void run_program(CELL start)
 		// usage: ( -- a ) - MACRO: then
 		case THEN:
 			reg1 = pop();
-			printf("*then*%08lx*", reg1);
+			// printf("*then*%08lx*", reg1);
 			CELL_AT(reg1) = HERE;
 			break;
 
@@ -806,28 +806,16 @@ char* parseword(char* line, char* word)
 		if (_stricmp(word, op.asm_instr) == 0)
 		{
 			// printf("\n(%s->%02X)", word, op.opcode);
-			if (STATE == 1)
-			{
-				if (op.flags == IS_IMMEDIATE)
-				{
-					PC = HERE + 0x100;
-					CELL_AT(PC) = op.opcode;
-					CELL_AT(PC+1) = RET;
-					run_program(PC);
-					CComma(op.opcode);
-				}
-				else
-				{
-					CComma(op.opcode);
-				}
-			}
-			else
+			if ((STATE == 0) || (op.flags == IS_IMMEDIATE))
 			{
 				PC = HERE + 0x100;
 				CELL_AT(PC) = op.opcode;
-				CELL_AT(PC+1) = RET;
+				CELL_AT(PC + 1) = RET;
 				run_program(PC);
-				// printf("---\n");
+			}
+			else
+			{
+				CComma(op.opcode);
 			}
 			return line;
 		}
@@ -835,15 +823,14 @@ char* parseword(char* line, char* word)
 	ENTRY_T* ep = find_word(word);
 	if (ep)
 	{
-		if (STATE == 1)
+		if ((STATE == 0) || (ep->flags == IS_IMMEDIATE))
 		{
-			CComma(CALL);
-			Comma(ep->xt);
+			run_program(ep->xt);
 		}
 		else
 		{
-			run_program(ep->xt);
-			// printf("---\n");
+			CComma(CALL);
+			Comma(ep->xt);
 		}
 		return line;
 	}
@@ -978,7 +965,7 @@ void write_info_file()
 	fprintf(output_fp, "\nWords:\n");
 	dump_words(output_fp);
 
-	fprintf(output_fp, "\nthe_memory: %08lx\n", the_memory);
+	fprintf(output_fp, "\nthe_memory: %08lx\n", (CELL)the_memory);
 
 	fclose(output_fp);
 	output_fp = NULL;
