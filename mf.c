@@ -26,24 +26,24 @@ CELL MEM_SZ = (1024 * 1);
 // ------------------------------------------------------------
 // To add functionality:
 // 1. Add an entry to the enum below
-// 2. Create a function that implements the functionality.
-// 3. Add an entry to the array of OPCODE_T records later in the file.
-//    - NOTE: the value in the enum needs to be between NOP and BYE
+// 2. Add an entry to the array of OPCODE_T records later in the file.
+// 3. Add a case to the switch in run_program()
 // ------------------------------------------------------------
 
 typedef struct {
 	const char *asm_instr;
 	const BYTE opcode;
+	const BYTE flags;
 } OPCODE_T;
 
 enum {
 	NOP = 0, 
 	SETA, A, AFETCH, ASTORE, 
 	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
-	LIT, DUP, DROP, OVER,
+	LIT, DUP, DROP, SWAP, OVER,
 	EMIT, GOTORC, CLS, INC, DEC, HA,
 	CCALL, CRET, CALL, RET, JMP, JMPZ, JNZ,
-	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, UNTIL_NEG,
+	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, WHILE,
 	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
 	DTOR, RTOD, AND, XOR,
 	BYE,
@@ -90,6 +90,9 @@ CELL *RSP = rstk;
 
 #define TOS  (*DSP)
 #define TOSR (*RSP)
+
+#define IS_IMMEDIATE  0x01
+#define IS_INLINE     0x02
 
 typedef struct {
 	CELL xt;
@@ -179,54 +182,60 @@ CELL rpop()
 // ------------------------------------------------------------
 
 OPCODE_T theOpcodes[] = {
-		  { "nop",     NOP,         }
-		, { ">a",      SETA,        }
-		, { "a",       A,           }
-		, { "a@",      AFETCH,      }
-		, { "a!",      ASTORE,      }
-		, { "@+",      AT_PLUS,     }
-		, { "!+",      STORE_PLUS,  }
-		, { "@+1",     AT_PLUS1,    }
-		, { "!+1",     STORE_PLUS1, }
-		, { "lit",     LIT,         }
-		, { "dup",     DUP,         }
-		, { "drop",    DROP,        }
-		, { "over",    OVER,        }
-		, { "emit",    EMIT,        }
-		, { "gotoRC",  GOTORC,      }
-		, { "cls",     CLS,         }
-		, { "1+",      INC,         }
-		, { "1-",      DEC,         }
-		, { "(h)",     HA,          }
-		, { "call",    CCALL,       }
-		, { "ret",     CRET,        }
-		, { "(call)",  CALL,        }
-		, { ";",       RET,         }
-		, { "jmp",     JMP,         }
-		, { "jmpz",    JMPZ,        }
-		, { "jnz",     JNZ,         }
-		, { "if",      IF,          }
-		, { "else",    ELSE,        }
-		, { "then",    THEN,        }
-		, { "begin",   BEGIN,       }
-		, { "until",   UNTIL,       }
-		, { "-until",  UNTIL_NEG,   }
-		, { "again",   THEN,        }
-		, { "+",       ADD,         }
-		, { "-",       SUB,         }
-		, { "*",       MULT,        }
-		, { "/",       DIV,         }
-		, { "2*",      TIMES2,      }
-		, { "2/",      DIVIDE2,     }
-		, { "+*",      PLUS_STAR,   }
-		, { ">r",      DTOR,        }
-		, { "r>",      RTOD,        }
-		, { "and",     AND,         }
-		, { "xor",     XOR,         }
-		, { "bye",     BYE,         }
-		, { NULL,      0,           }
+		  { "nop",     NOP,         0 }
+		, { ">a",      SETA,        0 }
+		, { "a",       A,           0 }
+		, { "a@",      AFETCH,      0 }
+		, { "a!",      ASTORE,      0 }
+		, { "@+",      AT_PLUS,     0 }
+		, { "!+",      STORE_PLUS,  0 }
+		, { "@+1",     AT_PLUS1,    0 }
+		, { "!+1",     STORE_PLUS1, 0 }
+		//{ "#",       CLIT,        IS_IMMEDIATE }
+		, { "lit",     LIT,         0 }
+		, { "dup",     DUP,         0 }
+		, { "drop",    DROP,        0 }
+		, { "over",    OVER,        0 }
+		, { "emit",    EMIT,        0 }
+		, { "gotoRC",  GOTORC,      0 }
+		, { "cls",     CLS,         0 }
+		, { "1+",      INC,         0 }
+		, { "1-",      DEC,         0 }
+		, { "(h)",     HA,          0 }
+		, { "call",    CCALL,       IS_IMMEDIATE }
+		, { "ret",     CRET,        IS_IMMEDIATE }
+		, { "(call)",  CALL,        0 }
+		, { ";",       RET,         IS_IMMEDIATE }
+		, { "jmp",     JMP,         0 }
+		, { "jmpz",    JMPZ,        0 }
+		, { "jnz",     JNZ,         0 }
+		, { "if",      IF,          IS_IMMEDIATE }
+		, { "else",    ELSE,        IS_IMMEDIATE }
+		, { "then",    THEN,        IS_IMMEDIATE }
+		, { "begin",   BEGIN,       IS_IMMEDIATE }
+		, { "again",   AGAIN,       IS_IMMEDIATE }
+		, { "until",   UNTIL,       IS_IMMEDIATE }
+		, { "while",   WHILE,       IS_IMMEDIATE }
+		, { "+",       ADD,         0 }
+		, { "-",       SUB,         0 }
+		, { "*",       MULT,        0 }
+		, { "/",       DIV,         0 }
+		, { "2*",      TIMES2,      0 }
+		, { "2/",      DIVIDE2,     0 }
+		, { "+*",      PLUS_STAR,   0 }
+		, { ">r",      DTOR,        0 }
+		, { "r>",      RTOD,        0 }
+		, { "and",     AND,         0 }
+		, { "xor",     XOR,         0 }
+		, { "bye",     BYE,         0 }
+		, { NULL,      0,           0 }
 };
 
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
 // *********************************************************************
 void run_program(CELL start)
 {
@@ -238,7 +247,7 @@ void run_program(CELL start)
 
 	while (1)
 	{
-		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
+		printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
 		IR = BYTE_AT(PC++);
 		switch (IR)
 		{
@@ -267,9 +276,39 @@ void run_program(CELL start)
 			CELL_AT(addr) = reg1;
 			break;
 
-		// usage: ( n -- )
-		case DROP:
+		// usage: ( -- n ) - a@, increment a by CELL
+		case AT_PLUS:
+			reg1 = CELL_AT(addr);
+			push(reg1);
+			addr += CELL_SZ;
+			break;
+
+		// usage: ( n -- ) - a!, increment a by CELL
+		case STORE_PLUS:
 			reg1 = pop();
+			CELL_AT(addr) = reg1;
+			addr += CELL_SZ;
+			break;
+
+		// usage: ( -- n ) - a@, increment a by CELL
+		case AT_PLUS1:
+			reg1 = BYTE_AT(addr);
+			push(reg1);
+			++addr;
+			break;
+
+		// usage: ( n -- ) - a!, increment a by CELL
+		case STORE_PLUS1:
+			reg1 = pop();
+			BYTE_AT(addr) = reg1;
+			++addr;
+			break;
+
+		// usage: ( -- n ) - pushed n onto the stack
+		case LIT:
+			reg1 = CELL_AT(PC);
+			push(reg1);
+			PC += CELL_SZ;
 			break;
 
 		// usage: ( n -- n n ) - dups TOS
@@ -278,10 +317,53 @@ void run_program(CELL start)
 			push(reg1);
 			break;
 
+		// usage: ( n -- )
+		case DROP:
+			reg1 = pop();
+			break;
+
+		// usage: ( n1 n2 -- n2 n1 )
+		case SWAP:
+			reg1 = pop();
+			reg2 = pop();
+			push(reg1);
+			push(reg2);
+			break;
+
+		// usage: ( n1 n2 -- n1 n2 n1 ) - standard OVER
+		case OVER:
+			reg1 = pop();
+			reg2 = TOS;
+			push(reg1);
+			push(reg2);
+			break;
+
 		// usage: ( c -- ) - prints char to  screen
 		case EMIT:
 			reg1 = pop();
 			printf("%c", (reg1 & 0xFF));
+			break;
+
+		// usage: ( r c -- ) - move cursor to screen pos (r,c)
+		case GOTORC:
+		{
+			COORD pos;
+			reg1 = pop();
+			reg2 = pop();
+			pos.Y = (short)reg2;
+			pos.X = (short)reg1;
+			SetConsoleCursorPosition(hStdout, pos);
+		}
+			break;
+
+		// usage: ( -- ) - clears the screen, moces cursor to (0,0)
+		case CLS:
+		{
+			COORD pos = { 0, 0 };
+			GetConsoleScreenBufferInfo(hStdout, &csbi);
+			reg1 = csbi.dwSize.X * csbi.dwSize.Y;
+			FillConsoleOutputCharacter(hStdout, ' ', reg1, pos, &reg2);
+		}
 			break;
 
 		// usage: ( n -- n+1 ) - increments TOS
@@ -296,12 +378,19 @@ void run_program(CELL start)
 
 		// usage: ( -- a ) - push next code address
 		case HA:
-			push(&HERE);
+			push((CELL)&HERE);
 			break;
 
-		// usage: ( -- ) - jumps to (PC)
-		case JMP:
-			PC = CELL_AT(PC);
+		// usage: ( addr -- ) - MACRO: compile call to addr
+		case CCALL:
+			CComma(CALL);
+			reg1 = pop();
+			Comma(reg1);
+			break;
+
+		// usage: ( -- ) - MACRO: compile RET
+		case CRET:
+			CComma(RET);
 			break;
 
 		// usage: ( -- ) - calls subroutine at (PC)
@@ -318,6 +407,78 @@ void run_program(CELL start)
 			PC = rpop();
 			if (--call_depth < 1)
 				return;
+			break;
+
+		// usage: ( -- ) - jumps to (PC)
+		case JMP:
+			PC = CELL_AT(PC);
+			break;
+
+		// usage: ( n -- n ) - if TOS=0, jump
+		case JMPZ:
+			if (TOS == 0)
+				PC = CELL_AT(PC);
+			else
+				PC += CELL_SZ;
+			break;
+
+		// usage: ( n -- n ) - if TOS!=0, jump
+		case JNZ:
+			if (TOS != 0)
+				PC = CELL_AT(PC);
+			else
+				PC += CELL_SZ;
+			break;
+
+		// usage: ( -- a ) - MACRO: if (jmpz placeholder)
+		case IF:
+			CComma(JMPZ);
+			printf("*if*%08lx*", HERE);
+			push(HERE);
+			Comma(0);
+			break;
+
+		// usage: ( -- a ) - MACRO: else ()
+		case ELSE:
+			printf("*else*");
+			reg1 = pop();
+			CComma(JMP);
+			push(HERE);
+			Comma(0);
+			CELL_AT(reg1) = HERE;
+			break;
+
+		// usage: ( -- a ) - MACRO: then
+		case THEN:
+			reg1 = pop();
+			printf("*then*%08lx*", reg1);
+			CELL_AT(reg1) = HERE;
+			break;
+
+		// usage: ( -- a ) - MACRO: push HERE
+		case BEGIN:
+			push(HERE);
+			break;
+
+		// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
+		case AGAIN:
+			reg1 = pop();
+			CComma(JMP);
+			Comma(reg1);
+			break;
+
+		// usage: ( a -- ) - MACRO: compile if TOS=false, jump to a
+		case UNTIL:
+			reg1 = pop();
+			CComma(JMPZ);
+			Comma(reg1);
+			break;
+
+		// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
+		case WHILE:
+			reg1 = pop();
+			CComma(JNZ);
+			Comma(reg1);
 			break;
 
 		// usage: ( n1 n2 -- n1+n2 ) - adds n1 and n2
@@ -344,109 +505,11 @@ void run_program(CELL start)
 			TOS /= reg1;
 			break;
 
-		// usage: ( -- n ) - a@, increment a by CELL
-		case AT_PLUS:
-			reg1 = CELL_AT(addr);
-			push(reg1);
-			addr += CELL_SZ;
-			break;
-
-		// usage: ( n -- ) - a!, increment a by CELL
-		case STORE_PLUS:
-			reg1 = pop();
-			CELL_AT(addr) = reg1;
-			++addr;
-			break;
-
 		// usage: ( n1 n2  -- n ) - ???
 		case PLUS_STAR:
 			reg1 = pop();
 			TOS += reg1;
 			push(99999);
-			break;
-
-		// usage: ( n1 n2 -- n1 n2 n1 ) - standard OVER
-		case OVER:
-			reg1 = pop();
-			reg2 = TOS;
-			push(reg1);
-			push(reg2);
-			break;
-
-		// usage: ( -- a ) - MACRO: push HERE
-		case BEGIN:
-			push(HERE);
-			break;
-
-		// usage: ( a -- ) - MACRO: compile if TOS=false, jump to a
-		case UNTIL:
-			reg1 = pop();
-			CComma(JNZ);
-			Comma(reg1);
-			break;
-
-		// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
-		case UNTIL_NEG:
-			reg1 = pop();
-			CComma(JMPZ);
-			Comma(reg1);
-			break;
-
-		// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
-		case AGAIN:
-			reg1 = pop();
-			CComma(JMP);
-			Comma(reg1);
-			break;
-
-		// usage: ??
-		case INVERT:
-			printf("-INVERT-");
-			break;
-
-		// usage: ( f -- f ) - if TOS=0, jump
-		case JMPZ:
-			if (TOS == 0)
-				PC = CELL_AT(PC);
-			else
-				PC += CELL_SZ;
-			break;
-
-		// usage: ( -- ) - if TOS!=0, jump
-		case JNZ:
-			if (TOS != 0)
-				PC = CELL_AT(PC);
-			else
-				PC += CELL_SZ;
-			break;
-
-		// usage: ( r c -- ) - move cursor to screen pos (r,c)
-		case GOTORC:
-		{
-			COORD pos;
-			reg1 = pop();
-			reg2 = pop();
-			pos.Y = (short)reg2;
-			pos.X = (short)reg1;
-			SetConsoleCursorPosition(hStdout, pos);
-		}
-			break;
-
-		// usage: ( -- ) - clears the screen, moces cursor to (0,0)
-		case CLS:
-		{
-			COORD pos = { 0, 0 };
-			GetConsoleScreenBufferInfo(hStdout, &csbi);
-			reg1 = csbi.dwSize.X * csbi.dwSize.Y;
-			FillConsoleOutputCharacter(hStdout, ' ', reg1, pos, &reg2);
-		}
-			break;
-
-		// usage: ( -- n ) - pushed n onto the stack
-		case LIT:
-			reg1 = CELL_AT(PC);
-			push(reg1);
-			PC += CELL_SZ;
 			break;
 
 		// usage: ( D:n -- R:n ) - moves TOS to return stack
@@ -492,9 +555,12 @@ void run_program(CELL start)
 	}
 }
 
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// ------------------------------------------------------------
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
+// *********************************************************************
 void define_word(char* word)
 {
 	// printf("\ndefine_word(%s, %d)", word, num_words + 1);
@@ -506,6 +572,12 @@ void define_word(char* word)
 	ep->xt = HERE;
 	ep->flags = 0;
 	strcpy_s(ep->name, sizeof(ep->name), word);
+}
+
+void set_flags(BYTE flags)
+{
+	ENTRY_T* ep = (ENTRY_T*)&(the_dict[num_words]);
+	ep->flags = flags;
 }
 
 ENTRY_T* find_word(const char* word)
@@ -677,19 +749,23 @@ char* parseword(char* line, char* word)
 		STATE = 0;
 		return line;
 	}
-	if (_stricmp(word, "if") == 0)
+	if (_stricmp(word, "immediate") == 0)
 	{
-		CComma(JNZ);
-		push(HERE);
-		Comma(0xFFFFFFFF);
-		return line;
+		set_flags(IS_IMMEDIATE);
 	}
-	if (_stricmp(word, "then") == 0)
-	{
-		tmp = pop();
-		CELL_AT(tmp) = HERE;
-		return line;
-	}
+	// if (_stricmp(word, "if") == 0)
+	// {
+	// 	CComma(JMPZ);
+	// 	push(HERE);
+	// 	Comma(0xFFFFFFFF);
+	// 	return line;
+	// }
+	// if (_stricmp(word, "then") == 0)
+	// {
+	// 	tmp = pop();
+	// 	CELL_AT(tmp) = HERE;
+	// 	return line;
+	// }
 	if (_stricmp(word, "begin") == 0)
 	{
 		push(HERE);
@@ -698,6 +774,18 @@ char* parseword(char* line, char* word)
 	if (_stricmp(word, "again") == 0)
 	{
 		CComma(JMP);
+		Comma(pop());
+		return line;
+	}
+	if (_stricmp(word, "while") == 0)
+	{
+		CComma(JNZ);
+		Comma(pop());
+		return line;
+	}
+	if (_stricmp(word, "until") == 0)
+	{
+		CComma(JMPZ);
 		Comma(pop());
 		return line;
 	}
@@ -719,13 +807,27 @@ char* parseword(char* line, char* word)
 		{
 			// printf("\n(%s->%02X)", word, op.opcode);
 			if (STATE == 1)
-				CComma(op.opcode);
+			{
+				if (op.flags == IS_IMMEDIATE)
+				{
+					PC = HERE + 0x100;
+					CELL_AT(PC) = op.opcode;
+					CELL_AT(PC+1) = RET;
+					run_program(PC);
+					CComma(op.opcode);
+				}
+				else
+				{
+					CComma(op.opcode);
+				}
+			}
 			else
 			{
-				PC = HERE + 10;
+				PC = HERE + 0x100;
 				CELL_AT(PC) = op.opcode;
 				CELL_AT(PC+1) = RET;
 				run_program(PC);
+				// printf("---\n");
 			}
 			return line;
 		}
@@ -741,6 +843,7 @@ char* parseword(char* line, char* word)
 		else
 		{
 			run_program(ep->xt);
+			// printf("---\n");
 		}
 		return line;
 	}
@@ -757,6 +860,7 @@ char* parseword(char* line, char* word)
 		return line;
 	}
 	printf("line #%d, [%s], '%s'??", line_num, line, word);
+	all_ok = 0;
 	return line;
 }
 
@@ -869,7 +973,7 @@ void write_info_file()
 		{
 			break;
 		}
-		fprintf(output_fp, "%02x, %s\n", op.opcode, op.asm_instr);
+		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
 	}
 	fprintf(output_fp, "\nWords:\n");
 	dump_words(output_fp);
