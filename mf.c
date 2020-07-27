@@ -13,40 +13,16 @@
 typedef unsigned long CELL;
 typedef unsigned char BYTE;
 
+// ------------------------------------------------------------
 // Things that would change from usage to usage
-CELL MEM_SZ = (1024 * 1);
+#define MEM_SZ_K 1
 #define MF_SRC "mf.src"
 #define MF_BIN "mf.bin"
 #define MF_INF "mf.txt"
 #define DSZ 64		// data stack size (circular)
 #define RSZ 64		// return stack size (circular)
 #define MAX_WORDS 2048
-
 // ------------------------------------------------------------
-// To add functionality:
-// 1. Add an entry to the enum below
-// 2. Add an entry to the array of OPCODE_T records later in the file.
-// 3. Add a case to the switch in run_program()
-// ------------------------------------------------------------
-
-typedef struct {
-	const char *asm_instr;
-	const BYTE opcode;
-	const BYTE flags;
-} OPCODE_T;
-
-enum prims {
-	NOP = 0,
-	SETA, A, AFETCH, ASTORE,
-	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
-	LIT, DUP, DROP, SWAP, OVER, COMMA, CCOMMA,
-	EMIT, GOTORC, CLS, INC, DEC, HA,
-	CCALL, CRET, CALL, RET, SEMIC,  JMP, JMPZ, JNZ,
-	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, WHILE,
-	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
-	DTOR, RTOD, AND, XOR,
-	BYE,
-} OPCODES;
 
 HANDLE hStdout, hStdin;
 CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -54,6 +30,7 @@ CONSOLE_SCREEN_BUFFER_INFO csbi;
 FILE* input_fp = NULL;
 FILE* output_fp = NULL;
 
+CELL MEM_SZ = (1024 * MEM_SZ_K);
 CELL HERE, STATE = 0;
 CELL BASE = 10;
 #define CELL_SZ 4
@@ -72,10 +49,6 @@ CELL tmp;
 int call_depth = 0;
 
 // Circular stacks - no over/under-flow!
-// - the top of data stack is TOS
-// - the top of return stack is TOSR
-
-// The stacks
 CELL dstk[DSZ];
 CELL *DSS = dstk;
 CELL *DSE = &(dstk[DSZ - 1]);
@@ -97,25 +70,101 @@ typedef struct {
 	char name[30];
 } ENTRY_T;
 
+typedef struct {
+	const char *asm_instr;
+	const BYTE opcode;
+	const BYTE flags;
+} OPCODE_T;
+
 BYTE* the_memory = NULL;
 ENTRY_T* the_dict = NULL;
 int num_words = 0;
 
-int _QUIT_HIT;
 int all_ok = 1;
 
 #define BYTE_AT(src) (*(BYTE *)(src))
 #define CELL_AT(src) (*(CELL *)(src))
-
 #define CComma(val)  *(BYTE *)(HERE++) = val
 #define Comma(val)   *(CELL *)HERE = val; HERE += CELL_SZ
 
-void StringCopy(char* dst, const char* src)
+// ------------------------------------------------------------
+// To add functionality:
+// 1. Add an entry to the enum below
+// 2. Add an entry to the array of OPCODE_T records later in the file.
+// 3. Add a case to the switch in run_program()
+// ------------------------------------------------------------
+
+enum prims {
+	NOP = 0,
+	SETA, A, AFETCH, ASTORE,
+	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
+	CLIT, LIT, DUP, DROP, SWAP, OVER, COMMA, CCOMMA,
+	EMIT, GOTORC, CLS, INC, DEC, HA,
+	CCALL, CRET, CALL, RET, SEMIC,  JMP, JMPZ, JNZ,
+	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, WHILE,
+	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
+	DTOR, RTOD, AND, XOR,
+	BYE,
+} OPCODES;
+
+// ------------------------------------------------------------
+OPCODE_T theOpcodes[] = {
+		  { "nop",     NOP,         0 }
+		, { ">a",      SETA,        0 }
+		, { "a",       A,           0 }
+		, { "a@",      AFETCH,      0 }
+		, { "a!",      ASTORE,      0 }
+		, { "@+",      AT_PLUS,     0 }
+		, { "!+",      STORE_PLUS,  0 }
+		, { "@+1",     AT_PLUS1,    0 }
+		, { "!+1",     STORE_PLUS1, 0 }
+		, { "#",       CLIT,        IS_IMMEDIATE }
+		, { "lit",     LIT,         0 }
+		, { "dup",     DUP,         0 }
+		, { "drop",    DROP,        0 }
+		, { "over",    OVER,        0 }
+		, { ",",       COMMA,       0 }
+		, { "C,",      CCOMMA,      0 }
+		, { "emit",    EMIT,        0 }
+		, { "gotoRC",  GOTORC,      0 }
+		, { "cls",     CLS,         0 }
+		, { "1+",      INC,         0 }
+		, { "1-",      DEC,         0 }
+		, { "(h)",     HA,          0 }
+		, { "call",    CCALL,       IS_IMMEDIATE }
+		, { "ret",     CRET,        IS_IMMEDIATE }
+		, { "(call)",  CALL,        0 }
+		, { ";",       SEMIC,       IS_IMMEDIATE }
+		, { "jmp",     JMP,         0 }
+		, { "jmpz",    JMPZ,        0 }
+		, { "jnz",     JNZ,         0 }
+		, { "if",      IF,          IS_IMMEDIATE }
+		, { "else",    ELSE,        IS_IMMEDIATE }
+		, { "then",    THEN,        IS_IMMEDIATE }
+		, { "begin",   BEGIN,       IS_IMMEDIATE }
+		, { "again",   AGAIN,       IS_IMMEDIATE }
+		, { "until",   UNTIL,       IS_IMMEDIATE }
+		, { "while",   WHILE,       IS_IMMEDIATE }
+		, { "+",       ADD,         0 }
+		, { "-",       SUB,         0 }
+		, { "*",       MULT,        0 }
+		, { "/",       DIV,         0 }
+		, { "2*",      TIMES2,      0 }
+		, { "2/",      DIVIDE2,     0 }
+		, { "+*",      PLUS_STAR,   0 }
+		, { ">r",      DTOR,        0 }
+		, { "r>",      RTOD,        0 }
+		, { "and",     AND,         0 }
+		, { "xor",     XOR,         0 }
+		, { "bye",     BYE,         0 }
+		, { NULL,      0,           0 }
+};
+
+
+void StringCopy(char *dst, const char *src)
 {
 	while (*src)
-	{
 		*(dst++) = *(src++);
-	}
 }
 
 char ToUpper(char c)
@@ -123,7 +172,7 @@ char ToUpper(char c)
 	return (c < 'a') ? c : (c > 'z') ? c : (c - 0x20);
 }
 
-size_t StringLen(char* cp)
+size_t StringLen(char *cp)
 {
 	int i = 0;
 	while (*(cp++))
@@ -132,7 +181,7 @@ size_t StringLen(char* cp)
 }
 
 #ifndef __VS19__
-void fopen_s(FILE** pfp, const char* nm, const char* mode)
+void fopen_s(FILE** pfp, const char *nm, const char *mode)
 {
 	FILE* fp = fopen(nm, mode);
 	*pfp = fp;
@@ -189,60 +238,6 @@ CELL rpop()
 
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-// ------------------------------------------------------------
-
-OPCODE_T theOpcodes[] = {
-		  { "nop",     NOP,         0 }
-		, { ">a",      SETA,        0 }
-		, { "a",       A,           0 }
-		, { "a@",      AFETCH,      0 }
-		, { "a!",      ASTORE,      0 }
-		, { "@+",      AT_PLUS,     0 }
-		, { "!+",      STORE_PLUS,  0 }
-		, { "@+1",     AT_PLUS1,    0 }
-		, { "!+1",     STORE_PLUS1, 0 }
-		//{ "#",       CLIT,        IS_IMMEDIATE }
-		, { "lit",     LIT,         0 }
-		, { "dup",     DUP,         0 }
-		, { "drop",    DROP,        0 }
-		, { "over",    OVER,        0 }
-		, { ",",       COMMA,       0 }
-		, { "C,",      CCOMMA,      0 }
-		, { "emit",    EMIT,        0 }
-		, { "gotoRC",  GOTORC,      0 }
-		, { "cls",     CLS,         0 }
-		, { "1+",      INC,         0 }
-		, { "1-",      DEC,         0 }
-		, { "(h)",     HA,          0 }
-		, { "call",    CCALL,       IS_IMMEDIATE }
-		, { "ret",     CRET,        IS_IMMEDIATE }
-		, { "(call)",  CALL,        0 }
-		, { ";",       SEMIC,       IS_IMMEDIATE }
-		, { "jmp",     JMP,         0 }
-		, { "jmpz",    JMPZ,        0 }
-		, { "jnz",     JNZ,         0 }
-		, { "if",      IF,          IS_IMMEDIATE }
-		, { "else",    ELSE,        IS_IMMEDIATE }
-		, { "then",    THEN,        IS_IMMEDIATE }
-		, { "begin",   BEGIN,       IS_IMMEDIATE }
-		, { "again",   AGAIN,       IS_IMMEDIATE }
-		, { "until",   UNTIL,       IS_IMMEDIATE }
-		, { "while",   WHILE,       IS_IMMEDIATE }
-		, { "+",       ADD,         0 }
-		, { "-",       SUB,         0 }
-		, { "*",       MULT,        0 }
-		, { "/",       DIV,         0 }
-		, { "2*",      TIMES2,      0 }
-		, { "2/",      DIVIDE2,     0 }
-		, { "+*",      PLUS_STAR,   0 }
-		, { ">r",      DTOR,        0 }
-		, { "r>",      RTOD,        0 }
-		, { "and",     AND,         0 }
-		, { "xor",     XOR,         0 }
-		, { "bye",     BYE,         0 }
-		, { NULL,      0,           0 }
-};
-
 // *********************************************************************
 // *********************************************************************
 // *********************************************************************
@@ -316,7 +311,14 @@ void run_program(CELL start)
 			++addr;
 			break;
 
-		// usage: ( -- n ) - pushed n onto the stack
+		// usage: ( n -- ) - MACRO: compile a literal
+		case CLIT:
+			CComma(LIT);
+			Comma(pop());
+			PC += CELL_SZ;
+			break;
+			
+		// usage: ( -- n ) - push n onto the stack
 		case LIT:
 			reg1 = CELL_AT(PC);
 			push(reg1);
@@ -583,15 +585,10 @@ void run_program(CELL start)
 }
 
 // *********************************************************************
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
-void define_word(char* word)
+void define_word(char *word)
 {
 	// printf("\ndefine_word(%s, %d)", word, num_words + 1);
-	ENTRY_T* ep = (ENTRY_T*)&(the_dict[++num_words]);
+	ENTRY_T *ep = (ENTRY_T *)&(the_dict[++num_words]);
 	size_t maxLen = sizeof(ep->name) - 1;
 	if (StringLen(word) > maxLen)
 		word[maxLen] = (char)0;
@@ -603,15 +600,15 @@ void define_word(char* word)
 
 void set_flags(BYTE flags)
 {
-	ENTRY_T* ep = (ENTRY_T*)&(the_dict[num_words]);
+	ENTRY_T *ep = (ENTRY_T *)&(the_dict[num_words]);
 	ep->flags = flags;
 }
 
-ENTRY_T* find_word(const char* word)
+ENTRY_T *find_word(const char *word)
 {
 	for (int i = num_words; i > 0; i--)
 	{
-		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
+		ENTRY_T *ep = (ENTRY_T *)&(the_dict[i]);
 		if (_stricmp(word, ep->name) == 0)
 		{
 			return ep;
@@ -624,20 +621,17 @@ void dump_words(FILE *fp)
 {
 	for (int i = num_words; i > 0; i--)
 	{
-		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
+		ENTRY_T *ep = (ENTRY_T *)&(the_dict[i]);
 		fprintf(fp, "%4d, %08lx, %08lx, %02x, %s\n", i, (CELL)ep, ep->xt, ep->flags, ep->name);
 	}
 }
 
 // ------------------------------------------------------------
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-
 // Returns a pointer to the first char after the first word in the line
 // NB: this is NOT a counted string
-char* getword(char* line, char* word)
+char *getword(char *line, char *word)
 {
-	char* cp = word;
+	char *cp = word;
 
 	// Skip beginning WS
 	while ((*line) && (*line <= ' '))
@@ -655,12 +649,12 @@ char* getword(char* line, char* word)
 	return line;
 }
 
-int is_number(char* word, long* the_num, int base)
+int is_number(char *word, long* the_num, int base)
 {
 	int is_neg = 0;
 	char *w = word;
 	long my_num = 0;
-	const char* possible_chars = "0123456789ABCDEF";
+	const char *possible_chars = "0123456789ABCDEF";
 	char valid_chars[24];
 
 	if ((word[0] == '\'') && (word[2] == '\'') && (word[3] == (char)0))
@@ -687,7 +681,7 @@ int is_number(char* word, long* the_num, int base)
 	{
 		char ch = *(w++);
 		ch = ToUpper(ch);
-		char* pos = strchr(valid_chars, ch);
+		char *pos = strchr(valid_chars, ch);
 		if (pos == 0)
 		{
 			return 0;
@@ -834,61 +828,11 @@ void parse(char *line)
 	}
 }
 
-void doTest()
-{
-	return;
-	// push(5); dup(); gotoRC();
-	printf("memory: 0x%08lX\n", (CELL)the_memory);
-
-	// CELL stop = 1000 * 1000 * 500;
-	CELL stop = 1000 * 1000 * 50;
-	CELL start = GetTickCount();
-
-	printf("Tests: push() ...");
-	for (CELL i = 1; i <= stop; i++)
-	{
-		push(i);
-	}
-	printf(" pop() ... ");
-	for (CELL i = 0; i < stop; i++)
-	{
-		tmp = pop();
-	}
-	CELL end = GetTickCount();
-	CELL tt = end - start;
-	printf(" %d.%d seconds\n", tt / 1000, tt % 1000);
-	dumpStack(8); printf("\n");
-
-	//Comma(0x22222222); define_word("test0");
-	//Comma(0x33333333); define_word("test1");
-	//Comma(0x44444444); define_word("test2");
-	//Comma(0x55555555); define_word("test1");
-	//dump_words();
-
-	ENTRY_T* ep;
-	ep = find_word("test0"); printf("\n%lx", (CELL)ep);
-	ep = find_word("test1"); printf(" %lx", (CELL)ep);
-	ep = find_word("test3"); printf(" %lx", (CELL)ep);
-}
-
 void compile()
 {
 	HERE = (CELL)the_memory;
 	CComma(JMP);
 	Comma(0xEEEEEEEE);
-
-	for (int i = 0; ; i++)
-	{
-		OPCODE_T op = theOpcodes[i];
-		if (op.asm_instr == NULL)
-		{
-			break;
-		}
-		// printf("\n%02x, %-8s", op.opcode, op.asm_instr);
-	}
-
-	doTest();
-	// return;
 
 	fopen_s(&input_fp, MF_SRC, "rt");
 	if (!input_fp)
@@ -905,7 +849,6 @@ void compile()
 		parse(buf);
 	}
 
-	// printf(".got-here.");
 	CELL_AT(the_memory + 1) = the_dict[num_words].xt;
 
 	fclose(input_fp);
@@ -928,9 +871,7 @@ void write_info_file()
 	{
 		OPCODE_T op = theOpcodes[i];
 		if (op.asm_instr == NULL)
-		{
 			break;
-		}
 		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
 	}
 	fprintf(output_fp, "\nWords:\n");
@@ -942,7 +883,6 @@ void write_info_file()
 	output_fp = NULL;
 }
 
-// *********************************************************************
 void write_bin_file()
 {
 	fopen_s(&output_fp, MF_BIN, "wb");
@@ -955,16 +895,15 @@ void write_bin_file()
 	int num = fwrite(the_memory, 1, MEM_SZ, output_fp);
 	fclose(output_fp);
 	output_fp = NULL;
-	// printf("\n%s, %d bytes written.\n", MF_BIN, num);
 }
 
+// *********************************************************************
 int main(int argc, char **argv)
 {
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	DSP = dstk;
-
 	the_memory = (BYTE *)malloc(MEM_SZ);
 	memset(the_memory, 0, MEM_SZ);
 
