@@ -9,7 +9,6 @@
 
 #include <windows.h> 
 #include <stdio.h>
-#include <ctype.h>
 
 typedef unsigned long CELL;
 typedef unsigned char BYTE;
@@ -36,21 +35,19 @@ typedef struct {
 	const BYTE flags;
 } OPCODE_T;
 
-enum {
-	NOP = 0, 
-	SETA, A, AFETCH, ASTORE, 
+enum prims {
+	NOP = 0,
+	SETA, A, AFETCH, ASTORE,
 	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
-	LIT, DUP, DROP, SWAP, OVER,
+	LIT, DUP, DROP, SWAP, OVER, COMMA, CCOMMA,
 	EMIT, GOTORC, CLS, INC, DEC, HA,
-	CCALL, CRET, CALL, RET, JMP, JMPZ, JNZ,
+	CCALL, CRET, CALL, RET, SEMIC,  JMP, JMPZ, JNZ,
 	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, WHILE,
 	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
 	DTOR, RTOD, AND, XOR,
 	BYE,
 } OPCODES;
 
-
-// The implementation
 HANDLE hStdout, hStdin;
 CONSOLE_SCREEN_BUFFER_INFO csbi;
 
@@ -113,8 +110,7 @@ int all_ok = 1;
 #define CComma(val)  *(BYTE *)(HERE++) = val
 #define Comma(val)   *(CELL *)HERE = val; HERE += CELL_SZ
 
-#ifndef __VS19__
-void strcpy_s(char* dst, CELL num, const char* src)
+void StringCopy(char* dst, const char* src)
 {
 	while (*src)
 	{
@@ -122,6 +118,20 @@ void strcpy_s(char* dst, CELL num, const char* src)
 	}
 }
 
+char ToUpper(char c)
+{
+	return (c < 'a') ? c : (c > 'z') ? c : (c - 0x20);
+}
+
+size_t StringLen(char* cp)
+{
+	int i = 0;
+	while (*(cp++))
+		i++;
+	return i;
+}
+
+#ifndef __VS19__
 void fopen_s(FILE** pfp, const char* nm, const char* mode)
 {
 	FILE* fp = fopen(nm, mode);
@@ -196,6 +206,8 @@ OPCODE_T theOpcodes[] = {
 		, { "dup",     DUP,         0 }
 		, { "drop",    DROP,        0 }
 		, { "over",    OVER,        0 }
+		, { ",",       COMMA,       0 }
+		, { "C,",      CCOMMA,      0 }
 		, { "emit",    EMIT,        0 }
 		, { "gotoRC",  GOTORC,      0 }
 		, { "cls",     CLS,         0 }
@@ -205,7 +217,7 @@ OPCODE_T theOpcodes[] = {
 		, { "call",    CCALL,       IS_IMMEDIATE }
 		, { "ret",     CRET,        IS_IMMEDIATE }
 		, { "(call)",  CALL,        0 }
-		, { ";",       RET,         IS_IMMEDIATE }
+		, { ";",       SEMIC,       IS_IMMEDIATE }
 		, { "jmp",     JMP,         0 }
 		, { "jmpz",    JMPZ,        0 }
 		, { "jnz",     JNZ,         0 }
@@ -266,8 +278,8 @@ void run_program(CELL start)
 
 		// usage: ( -- n ) - a@, fetch CELL at current address
 		case AFETCH:
-			reg1 = CELL_AT(addr);
-			push(reg1);
+			reg3 = CELL_AT(addr);
+			push(reg3);
 			break;
 
 		// usage: ( n -- ) - store TOS to current address pointer
@@ -338,6 +350,15 @@ void run_program(CELL start)
 			push(reg2);
 			break;
 
+		case COMMA:
+			CELL_AT(HERE) = pop();
+			HERE += CELL_SZ;
+			break;
+
+		case CCOMMA:
+			*(BYTE *)(HERE++) = (BYTE)pop();
+			break;
+
 		// usage: ( c -- ) - prints char to  screen
 		case EMIT:
 			reg1 = pop();
@@ -402,11 +423,17 @@ void run_program(CELL start)
 			++call_depth;
 			break;
 
-		// usage: ( -- ) - return from subroutine
+			// usage: ( -- ) - return from subroutine
 		case RET:
 			PC = rpop();
 			if (--call_depth < 1)
 				return;
+			break;
+
+		// usage: ( -- ) - MACRO: end of word
+		case SEMIC:
+			CComma(RET);
+			STATE = 0;
 			break;
 
 		// usage: ( -- ) - jumps to (PC)
@@ -566,12 +593,12 @@ void define_word(char* word)
 	// printf("\ndefine_word(%s, %d)", word, num_words + 1);
 	ENTRY_T* ep = (ENTRY_T*)&(the_dict[++num_words]);
 	size_t maxLen = sizeof(ep->name) - 1;
-	if (strlen(word) > maxLen)
+	if (StringLen(word) > maxLen)
 		word[maxLen] = (char)0;
 
 	ep->xt = HERE;
 	ep->flags = 0;
-	strcpy_s(ep->name, sizeof(ep->name), word);
+	StringCopy(ep->name, word);
 }
 
 void set_flags(BYTE flags)
@@ -631,9 +658,9 @@ char* getword(char* line, char* word)
 int is_number(char* word, long* the_num, int base)
 {
 	int is_neg = 0;
-	char* w = word;
+	char *w = word;
 	long my_num = 0;
-	const char* possible_chars = "0123456789abcdef";
+	const char* possible_chars = "0123456789ABCDEF";
 	char valid_chars[24];
 
 	if ((word[0] == '\'') && (word[2] == '\'') && (word[3] == (char)0))
@@ -642,25 +669,11 @@ int is_number(char* word, long* the_num, int base)
 		return 1;
 	}
 
-	if (*w == '%')
-	{
-		base = 2;
-		++w;
-	}
+	if (*w == '%') { base =  2; ++w; }
+	if (*w == '#') { base = 10; ++w; }
+	if (*w == '$') { base = 16; ++w; }
 
-	if (*w == '#')
-	{
-		base = 10;
-		++w;
-	}
-
-	if (*w == '$')
-	{
-		base = 16;
-		++w;
-	}
-
-	strcpy_s(valid_chars, sizeof(valid_chars), possible_chars);
+	StringCopy(valid_chars, possible_chars);
 	valid_chars[base] = (char)0;
 
 	// One leading minus sign is OK
@@ -673,7 +686,7 @@ int is_number(char* word, long* the_num, int base)
 	while (*w)
 	{
 		char ch = *(w++);
-		ch = tolower(ch);
+		ch = ToUpper(ch);
 		char* pos = strchr(valid_chars, ch);
 		if (pos == 0)
 		{
@@ -692,7 +705,7 @@ int is_number(char* word, long* the_num, int base)
 }
 
 int line_num;
-char* parseword(char* line, char* word)
+char *parseword(char *line, char *word)
 {
 	if (word[0] == '\\')
 	{
@@ -704,7 +717,7 @@ char* parseword(char* line, char* word)
 		// [lit] [cell]    [ret] [val]
 		// 100    101-104   105   106
 		line = getword(line, word);
-		if (strlen(word) > 0)
+		if (StringLen(word) > 0)
 		{
 			define_word(word);
 			CComma(LIT);
@@ -717,7 +730,7 @@ char* parseword(char* line, char* word)
 	if (_stricmp(word, "const") == 0)
 	{
 		line = getword(line, word);
-		if (strlen(word) > 0)
+		if (StringLen(word) > 0)
 		{
 			define_word(word);
 			tmp = pop();
@@ -730,17 +743,11 @@ char* parseword(char* line, char* word)
 	if (_stricmp(word, ":") == 0)
 	{
 		line = getword(line, word);
-		if (strlen(word) > 0)
+		if (StringLen(word) > 0)
 		{
 			define_word(word);
 			STATE = 1;
 		}
-		return line;
-	}
-	if (_stricmp(word, ";") == 0)
-	{
-		CComma(RET);
-		STATE = 0;
 		return line;
 	}
 	if (_stricmp(word, ";-") == 0)
@@ -752,42 +759,6 @@ char* parseword(char* line, char* word)
 	if (_stricmp(word, "immediate") == 0)
 	{
 		set_flags(IS_IMMEDIATE);
-	}
-	// if (_stricmp(word, "if") == 0)
-	// {
-	// 	CComma(JMPZ);
-	// 	push(HERE);
-	// 	Comma(0xFFFFFFFF);
-	// 	return line;
-	// }
-	// if (_stricmp(word, "then") == 0)
-	// {
-	// 	tmp = pop();
-	// 	CELL_AT(tmp) = HERE;
-	// 	return line;
-	// }
-	if (_stricmp(word, "begin") == 0)
-	{
-		push(HERE);
-		return line;
-	}
-	if (_stricmp(word, "again") == 0)
-	{
-		CComma(JMP);
-		Comma(pop());
-		return line;
-	}
-	if (_stricmp(word, "while") == 0)
-	{
-		CComma(JNZ);
-		Comma(pop());
-		return line;
-	}
-	if (_stricmp(word, "until") == 0)
-	{
-		CComma(JMPZ);
-		Comma(pop());
-		return line;
 	}
 	if (_stricmp(word, "jmp") == 0)
 	{
@@ -820,7 +791,7 @@ char* parseword(char* line, char* word)
 			return line;
 		}
 	}
-	ENTRY_T* ep = find_word(word);
+	ENTRY_T *ep = find_word(word);
 	if (ep)
 	{
 		if ((STATE == 0) || (ep->flags == IS_IMMEDIATE))
@@ -851,7 +822,7 @@ char* parseword(char* line, char* word)
 	return line;
 }
 
-void parse(char* line)
+void parse(char *line)
 {
 	char word[64];
 	// printf("%s", line);
@@ -987,18 +958,18 @@ void write_bin_file()
 	// printf("\n%s, %d bytes written.\n", MF_BIN, num);
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	DSP = dstk;
 
-	the_memory = (BYTE*)malloc(MEM_SZ);
+	the_memory = (BYTE *)malloc(MEM_SZ);
 	memset(the_memory, 0, MEM_SZ);
 
 	CELL dict_sz = MAX_WORDS * sizeof(ENTRY_T);
-	the_dict = (ENTRY_T*)malloc(dict_sz);
+	the_dict = (ENTRY_T *)malloc(dict_sz);
 	memset(the_dict, 0, dict_sz);
 
 	compile();

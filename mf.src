@@ -9,5 +9,6 @@
 : main test ok ;
 
 'h' emit 'i' emit ok
-1 try-if
-0 try-if
+1 try-if 0 try-if cr
+
+'a' 'A' - emit
