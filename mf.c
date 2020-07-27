@@ -27,8 +27,8 @@ typedef unsigned char BYTE;
 HANDLE hStdout, hStdin;
 CONSOLE_SCREEN_BUFFER_INFO csbi;
 
-FILE* input_fp = NULL;
-FILE* output_fp = NULL;
+FILE *input_fp = NULL;
+FILE *output_fp = NULL;
 
 CELL MEM_SZ = (1024 * MEM_SZ_K);
 CELL HERE, STATE = 0;
@@ -46,7 +46,6 @@ register CELL *DSP asm("edi");
 
 CELL addr;
 CELL tmp;
-int call_depth = 0;
 
 // Circular stacks - no over/under-flow!
 CELL dstk[DSZ];
@@ -81,6 +80,7 @@ ENTRY_T* the_dict = NULL;
 int num_words = 0;
 
 int all_ok = 1;
+int line_num = 0;
 
 #define BYTE_AT(src) (*(BYTE *)(src))
 #define CELL_AT(src) (*(CELL *)(src))
@@ -165,6 +165,7 @@ void StringCopy(char *dst, const char *src)
 {
 	while (*src)
 		*(dst++) = *(src++);
+	*dst = (char)0;
 }
 
 char ToUpper(char c)
@@ -198,7 +199,6 @@ void push(CELL v)
 	*DSP = v;
 }
 
-// ------------------------------------------------------------
 CELL pop()
 {
 	CELL v = *DSP;
@@ -208,18 +208,6 @@ CELL pop()
 }
 
 // ------------------------------------------------------------
-void dumpStack(int num)
-{
-	num = (num == 0) ? DSZ : num;
-	printf("( ");
-	for (int i = 0; i < num; i++)
-		printf("%d ", pop());
-	printf(")");
-}
-
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// ------------------------------------------------------------
 void rpush(CELL v)
 {
 	if (++RSP > RSE)
@@ -227,7 +215,6 @@ void rpush(CELL v)
 	*RSP = v;
 }
 
-// ------------------------------------------------------------
 CELL rpop()
 {
 	CELL v = *RSP;
@@ -237,20 +224,13 @@ CELL rpop()
 }
 
 // ------------------------------------------------------------
-// ------------------------------------------------------------
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
-// *********************************************************************
 void run_program(CELL start)
 {
 	BYTE IR;
 	CELL reg1, reg2, reg3;
 
 	PC = start;
-	call_depth = 1;
+	int call_depth = 1;
 
 	while (1)
 	{
@@ -462,14 +442,12 @@ void run_program(CELL start)
 		// usage: ( -- a ) - MACRO: if (jmpz placeholder)
 		case IF:
 			CComma(JMPZ);
-			// printf("*if*%08lx*", HERE);
 			push(HERE);
 			Comma(0);
 			break;
 
 		// usage: ( -- a ) - MACRO: else ()
 		case ELSE:
-			// printf("*else*");
 			reg1 = pop();
 			CComma(JMP);
 			push(HERE);
@@ -480,7 +458,6 @@ void run_program(CELL start)
 		// usage: ( -- a ) - MACRO: then
 		case THEN:
 			reg1 = pop();
-			// printf("*then*%08lx*", reg1);
 			CELL_AT(reg1) = HERE;
 			break;
 
@@ -584,10 +561,9 @@ void run_program(CELL start)
 	}
 }
 
-// *********************************************************************
+// ------------------------------------------------------------
 void define_word(char *word)
 {
-	// printf("\ndefine_word(%s, %d)", word, num_words + 1);
 	ENTRY_T *ep = (ENTRY_T *)&(the_dict[++num_words]);
 	size_t maxLen = sizeof(ep->name) - 1;
 	if (StringLen(word) > maxLen)
@@ -596,12 +572,6 @@ void define_word(char *word)
 	ep->xt = HERE;
 	ep->flags = 0;
 	StringCopy(ep->name, word);
-}
-
-void set_flags(BYTE flags)
-{
-	ENTRY_T *ep = (ENTRY_T *)&(the_dict[num_words]);
-	ep->flags = flags;
 }
 
 ENTRY_T *find_word(const char *word)
@@ -628,7 +598,6 @@ void dump_words(FILE *fp)
 
 // ------------------------------------------------------------
 // Returns a pointer to the first char after the first word in the line
-// NB: this is NOT a counted string
 char *getword(char *line, char *word)
 {
 	char *cp = word;
@@ -649,13 +618,14 @@ char *getword(char *line, char *word)
 	return line;
 }
 
+// ------------------------------------------------------------
 int is_number(char *word, long* the_num, int base)
 {
-	int is_neg = 0;
-	char *w = word;
-	long my_num = 0;
 	const char *possible_chars = "0123456789ABCDEF";
 	char valid_chars[24];
+	long my_num = 0;
+	char *w = word;
+	int is_neg = 0;
 
 	if ((word[0] == '\'') && (word[2] == '\'') && (word[3] == (char)0))
 	{
@@ -683,57 +653,19 @@ int is_number(char *word, long* the_num, int base)
 		ch = ToUpper(ch);
 		char *pos = strchr(valid_chars, ch);
 		if (pos == 0)
-		{
 			return 0;
-		}
-		CELL digit = (CELL)(pos - valid_chars);
+
+		BYTE digit = (BYTE)(pos - valid_chars);
 		my_num = (my_num * base) + digit;
 	}
 
-	if (is_neg)
-	{
-		my_num = -my_num;
-	}
-	*the_num = my_num;
+	*the_num = is_neg ? -my_num : my_num;
 	return 1;
 }
 
-int line_num;
+// ------------------------------------------------------------
 char *parseword(char *line, char *word)
 {
-	if (word[0] == '\\')
-	{
-		*line = 0;
-		return line;
-	}
-	if (_stricmp(word, "variable") == 0)
-	{
-		// [lit] [cell]    [ret] [val]
-		// 100    101-104   105   106
-		line = getword(line, word);
-		if (StringLen(word) > 0)
-		{
-			define_word(word);
-			CComma(LIT);
-			Comma(HERE+5);
-			CComma(RET);
-			Comma(0);
-		}
-		return line;
-	}
-	if (_stricmp(word, "const") == 0)
-	{
-		line = getword(line, word);
-		if (StringLen(word) > 0)
-		{
-			define_word(word);
-			tmp = pop();
-			CComma(LIT);
-			Comma(tmp);
-			CComma(RET);
-		}
-		return line;
-	}
 	if (_stricmp(word, ":") == 0)
 	{
 		line = getword(line, word);
@@ -742,23 +674,6 @@ char *parseword(char *line, char *word)
 			define_word(word);
 			STATE = 1;
 		}
-		return line;
-	}
-	if (_stricmp(word, ";-") == 0)
-	{
-		CComma(RET);
-		STATE = 0;
-		return line;
-	}
-	if (_stricmp(word, "immediate") == 0)
-	{
-		set_flags(IS_IMMEDIATE);
-	}
-	if (_stricmp(word, "jmp") == 0)
-	{
-		// printf("-jmp:%08lx-", TOS);
-		CComma(JMP);
-		Comma(pop());
 		return line;
 	}
 	for (int i = 0; ; i++)
@@ -770,7 +685,6 @@ char *parseword(char *line, char *word)
 		}
 		if (_stricmp(word, op.asm_instr) == 0)
 		{
-			// printf("\n(%s->%02X)", word, op.opcode);
 			if ((STATE == 0) || (op.flags == IS_IMMEDIATE))
 			{
 				PC = HERE + 0x100;
@@ -816,13 +730,14 @@ char *parseword(char *line, char *word)
 	return line;
 }
 
-void parse(char *line)
+void parse_line(char *line)
 {
 	char word[64];
-	// printf("%s", line);
 	line = getword(line, word);
 	while (word[0])
 	{
+		if ((StringLen(word) == 1) && (word[0] == '\\'))
+			return;
 		line = parseword(line, word);
 		line = getword(line, word);
 	}
@@ -830,23 +745,24 @@ void parse(char *line)
 
 void compile()
 {
-	HERE = (CELL)the_memory;
-	CComma(JMP);
-	Comma(0xEEEEEEEE);
+	char buf[256];
 
 	fopen_s(&input_fp, MF_SRC, "rt");
 	if (!input_fp)
 	{
 		printf("can't open input file!");
-		exit(1);
+		return;
 	}
 
+	HERE = (CELL)the_memory;
+	CComma(JMP);
+	Comma(0);
 	line_num = 0;
-	char buf[256];
+
 	while (fgets(buf, 256, input_fp) == buf)
 	{
 		++line_num;
-		parse(buf);
+		parse_line(buf);
 	}
 
 	CELL_AT(the_memory + 1) = the_dict[num_words].xt;
@@ -855,18 +771,17 @@ void compile()
 	input_fp = NULL;
 }
 
-// *********************************************************************
+// ------------------------------------------------------------
 void write_info_file()
 {
 	fopen_s(&output_fp, MF_INF, "wt");
 	if (!output_fp)
 	{
 		printf("ERROR: Can't open info file!");
-		exit(1);
+		return;
 	}
 
-	fprintf(output_fp, "Opcodes:\n");
-	fprintf(output_fp, "-----------------------------\n");
+	fprintf(output_fp, "Opcodes:\n-----------------------------\n");
 	for (int i = 0; ; i++)
 	{
 		OPCODE_T op = theOpcodes[i];
@@ -874,10 +789,10 @@ void write_info_file()
 			break;
 		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
 	}
-	fprintf(output_fp, "\nWords:\n");
-	dump_words(output_fp);
 
 	fprintf(output_fp, "\nthe_memory: %08lx\n", (CELL)the_memory);
+	fprintf(output_fp, "\nWords:\n");
+	dump_words(output_fp);
 
 	fclose(output_fp);
 	output_fp = NULL;
@@ -889,7 +804,7 @@ void write_bin_file()
 	if (!output_fp)
 	{
 		printf("ERROR: Can't open output file!");
-		exit(1);
+		return;
 	}
 
 	int num = fwrite(the_memory, 1, MEM_SZ, output_fp);
@@ -897,7 +812,7 @@ void write_bin_file()
 	output_fp = NULL;
 }
 
-// *********************************************************************
+// ------------------------------------------------------------
 int main(int argc, char **argv)
 {
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
