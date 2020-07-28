@@ -44,7 +44,7 @@ register CELL PC asm("esi");
 register CELL *DSP asm("edi");
 #endif
 
-CELL addr;
+CELL addr, src, dst;
 CELL tmp;
 
 // Circular stacks - no over/under-flow!
@@ -95,9 +95,9 @@ int line_num = 0;
 // ------------------------------------------------------------
 
 enum prims {
-	NOP = 0,
-	SETA, A, AFETCH, ASTORE, AFETCH1, ASTORE1,
-	AT_PLUS, STORE_PLUS, AT_PLUS1, STORE_PLUS1,
+	NOP = 0, SETA, A,  SETS, S, SETD, D, 
+	FETCH, FETCH1, CFETCH, CFETCH1, 
+	STORE, STORE1, CSTORE, CSTORE1,
 	CLIT, LIT, DUP, DROP, SWAP, OVER, COMMA, CCOMMA,
 	EMIT, GOTORC, CLS, INC, DEC, HA, BA,
 	CCALL, CRET, CALL, RET, SEMIC,  JMP, JMPZ, JNZ,
@@ -112,14 +112,18 @@ OPCODE_T theOpcodes[] = {
 		  { "nop",     NOP,         0 }
 		, { ">a",      SETA,        0 }
 		, { "a",       A,           0 }
-		, { "a@",      AFETCH,      0 }
-		, { "a!",      ASTORE,      0 }
-		, { "a@1",     AFETCH1,     0 }
-		, { "a!1",     ASTORE1,     0 }
-		, { "@+",      AT_PLUS,     0 }
-		, { "!+",      STORE_PLUS,  0 }
-		, { "@+1",     AT_PLUS1,    0 }
-		, { "!+1",     STORE_PLUS1, 0 }
+		, { ">src",    SETS,        0 }
+		, { "src",     S,           0 }
+		, { ">dst",    SETD,        0 }
+		, { "dst",     D,           0 }
+		, { "@@",      FETCH,       0 }
+		, { "@@+",     FETCH1,      0 }
+		, { "c@@",     CFETCH,      0 }
+		, { "c@@+",    CFETCH1,     0 }
+		, { "!!",      STORE,       0 }
+		, { "!!+",     STORE1,      0 }
+		, { "c!!",     CSTORE,      0 }
+		, { "c!!+",    CSTORE1,     0 }
 		, { "#",       CLIT,        IS_IMMEDIATE }
 		, { "lit",     LIT,         0 }
 		, { "dup",     DUP,         0 }
@@ -246,68 +250,6 @@ void run_program(CELL start)
 		case NOP:
 			break;
 
-		// usage: ( -- a ) - sets current address
-		case SETA:
-			addr = pop();
-			break;
-
-		// usage: ( -- a ) - current address
-		case A:
-			push(addr);
-			break;
-
-		// usage: ( -- n ) - a@, fetch CELL at current address
-		case AFETCH:
-			reg3 = CELL_AT(addr);
-			push(reg3);
-			break;
-
-		// usage: ( n -- ) - store TOS to current address pointer
-		case ASTORE:
-			reg1 = pop();
-			CELL_AT(addr) = reg1;
-			break;
-
-		// usage: ( -- n ) - a@, fetch CELL at current address
-		case AFETCH1:
-			reg3 = BYTE_AT(addr);
-			push(reg3);
-			break;
-
-		// usage: ( n -- ) - store TOS to current address pointer
-		case ASTORE1:
-			reg1 = pop();
-			BYTE_AT(addr) = reg1;
-			break;
-
-		// usage: ( -- n ) - a@, fetch CELL, increment a by CELL
-		case AT_PLUS:
-			reg1 = CELL_AT(addr);
-			push(reg1);
-			addr += CELL_SZ;
-			break;
-
-		// usage: ( n -- ) - a!, store CELL, increment a by CELL
-		case STORE_PLUS:
-			reg1 = pop();
-			CELL_AT(addr) = reg1;
-			addr += CELL_SZ;
-			break;
-
-		// usage: ( -- n ) - fetch BYTE at a@, increment a by 1
-		case AT_PLUS1:
-			reg1 = BYTE_AT(addr);
-			push(reg1);
-			++addr;
-			break;
-
-		// usage: ( n -- ) - store BYTE to a!, increment a by 1
-		case STORE_PLUS1:
-			reg1 = pop();
-			BYTE_AT(addr) = (BYTE)reg1;
-			++addr;
-			break;
-
 		// usage: ( n -- ) - MACRO: compile a literal
 		case CLIT:
 			CComma(LIT);
@@ -320,6 +262,80 @@ void run_program(CELL start)
 			reg1 = CELL_AT(PC);
 			push(reg1);
 			PC += CELL_SZ;
+			break;
+
+		// usage: ( -- a ) - sets current address
+		case SETA:
+			addr = pop();
+			break;
+
+		// usage: ( -- a ) - current address
+		case A:
+			push(addr);
+			break;
+
+		// usage: ( -- a ) - sets current address
+		case SETS:
+			src = pop();
+			break;
+
+		// usage: ( -- a ) - current address
+		case S:
+			push(src);
+			break;
+
+		// usage: ( -- a ) - sets current address
+		case SETD:
+			dst = pop();
+			break;
+
+		// usage: ( -- a ) - current address
+		case D:
+			push(dst);
+			break;
+
+		// usage: ( -- n ) - @, fetch CELL at src
+		case FETCH:
+			push(CELL_AT(src));
+			break;
+
+		// usage: ( -- n ) - @+, fetch CELL, increment src by CELL
+		case FETCH1:
+			push(CELL_AT(src));
+			src += CELL_SZ;
+			break;
+
+		// usage: ( -- n ) - c@, fetch BYTE at src
+		case CFETCH:
+			push(BYTE_AT(src));
+			break;
+
+		// usage: ( -- n ) - c@+, fetch NYTE, increment src by 1
+		case CFETCH1:
+			push(BYTE_AT(src));
+			src++;
+			break;
+
+		// usage: ( n -- ) - !, store TOS to dst (CELL)
+		case STORE:
+			CELL_AT(dst) = pop();
+			break;
+
+		// usage: ( n -- ) - c!, store TOS to dst (BYTE)
+		case CSTORE:
+			BYTE_AT(dst) = pop();
+			break;
+
+		// usage: ( n -- ) - !+, store TOS to dst (CELL), next CELL
+		case STORE1:
+			CELL_AT(dst) = pop();
+			dst += CELL_SZ;
+			break;
+
+		// usage: ( n -- ) - c!+, store TOS to dst (CELL), next BYTE
+		case CSTORE1:
+			BYTE_AT(dst) = pop();
+			dst++;
 			break;
 
 		// usage: ( n -- n n ) - dups TOS
@@ -568,7 +584,7 @@ void run_program(CELL start)
 		case DOT:
 			reg1 = pop();
 			if (BASE == 16)
-				printf("$%X", reg1);
+				printf("$%02X", reg1);
 			else if (BASE == 10)
 				printf("#%d", reg1);
 			else
