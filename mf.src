@@ -1,14 +1,20 @@
 \ TEST
+: @ >a a@ ; : ! >a a! ; : c@ >a a@1 ; : c! >a a!1 ;
+: here (h) @ ; : hex $10 base ! ; : decimal #10 base ! ;
 
-: space #32 emit ;
-: cr #13 emit #10 emit ;
+: space #32 emit ; : cr #13 emit #10 emit ; : . (.) space ; 
+
 : ok space 'o' emit 'k' emit cr ;
 : .t 't' emit 'e' emit 's' emit 't' emit '.' dup dup emit emit emit ;
-: test .t 1000 1000 * 500 * begin 1- while drop '!' emit ;
-: try-if if 'y' else 'n' then emit drop ;
+: test .t #1000 #1000 * #100 * begin 1- while drop '!' emit ;
+: try-if if 'y' else 'n' then emit drop space ;
 : main test ok ;
+: ttt 1 try-if 0 try-if here c@ dup . $44 c, here 1- C@ . ok main ;
 
-'h' emit 'i' emit ok
-1 try-if 0 try-if cr
+\ hex here . $33 c, $12345678 , ok
+: x1 here $30 - >a $30 begin a . @+1 . cr 1- while drop ;
+: x test space ;
 
-'a' 'A' - emit
+\ : xxx test ;
+decimal 
+234 566 + dup . hex . ok
