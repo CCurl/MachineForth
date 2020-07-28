@@ -1,4 +1,5 @@
 \ TEST
+variable test-var
 : @ >src @@ ; : ! >dst !! ; : c@ >src c@@ ; : c! >dst c!! ;
 : here (h) @ ; : hex $10 base ! ; : decimal #10 base ! ;
 
@@ -14,5 +15,5 @@
 : x1 here $40 - >src $20 begin src . c@@+ . cr 1- while drop ;
 : x test2 x1 test space ;
 
-decimal 
-234 566 + dup . hex . ok
+hex
+here dup . the-memory dup . - . cr cr

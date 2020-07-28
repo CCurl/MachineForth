@@ -140,8 +140,8 @@ OPCODE_T theOpcodes[] = {
 		, { "base",    BA,          0 }
 		, { "call",    CCALL,       IS_IMMEDIATE }
 		, { "ret",     CRET,        IS_IMMEDIATE }
-		, { "(call)",  CALL,        0 }
-		, { "(ret)",   RET,         0 }
+		, { "do-call", CALL,        0 }
+		, { "do-ret",  RET,         0 }
 		, { ";",       SEMIC,       IS_IMMEDIATE }
 		, { "jmp",     JMP,         0 }
 		, { "jmpz",    JMPZ,        0 }
@@ -294,7 +294,7 @@ void run_program(CELL start)
 			push(dst);
 			break;
 
-		// usage: ( -- n ) - @, fetch CELL at src
+		// usage: ( -- n ) - @@, fetch CELL at src
 		case FETCH:
 			push(CELL_AT(src));
 			break;
@@ -305,7 +305,7 @@ void run_program(CELL start)
 			src += CELL_SZ;
 			break;
 
-		// usage: ( -- n ) - c@, fetch BYTE at src
+		// usage: ( -- n ) - c@@, fetch BYTE at src
 		case CFETCH:
 			push(BYTE_AT(src));
 			break;
@@ -323,7 +323,7 @@ void run_program(CELL start)
 
 		// usage: ( n -- ) - c!, store TOS to dst (BYTE)
 		case CSTORE:
-			BYTE_AT(dst) = pop();
+			BYTE_AT(dst) = (BYTE)pop();
 			break;
 
 		// usage: ( n -- ) - !+, store TOS to dst (CELL), next CELL
@@ -334,7 +334,7 @@ void run_program(CELL start)
 
 		// usage: ( n -- ) - c!+, store TOS to dst (CELL), next BYTE
 		case CSTORE1:
-			BYTE_AT(dst) = pop();
+			BYTE_AT(dst) = (BYTE)pop();
 			dst++;
 			break;
 
@@ -731,6 +731,24 @@ char *parseword(char *line, char *word)
 		}
 		return line;
 	}
+
+	if (_stricmp(word, "variable") == 0)
+	{
+		push(HERE);
+		Comma(0);
+		StringCopy(word, "constant");
+	}
+
+	if (_stricmp(word, "constant") == 0)
+	{
+		line = getword(line, word);
+		define_word(word);
+		CComma(LIT);
+		Comma(pop());
+		CComma(RET);
+		return line;
+	}
+
 	for (int i = 0; ; i++)
 	{
 		OPCODE_T op = theOpcodes[i];
@@ -812,6 +830,11 @@ void compile()
 	HERE = (CELL)the_memory;
 	CComma(JMP);
 	Comma(0);
+
+	define_word("the-memory");
+	CComma(LIT);
+	Comma((CELL)the_memory);
+	CComma(RET);
 	line_num = 0;
 
 	while (fgets(buf, 256, input_fp) == buf)
