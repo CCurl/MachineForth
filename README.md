@@ -1,7 +1,7 @@
 # MachineForth
 This is a compiler/vm for a simple forth on Windows.
 
-It was inspired by Chuck Moore's "Machine Forth". It is completely contained in one file, mg.c
+It was inspired by Chuck Moore's "Machine Forth". It is completely contained in one file, mf.c
 
 It has circular stacks, both data and return.
 
