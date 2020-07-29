@@ -18,6 +18,7 @@ typedef unsigned char BYTE;
 #define MEM_SZ_K 1
 #define MF_SRC "mf.src"
 #define MF_BIN "mf.bin"
+#define MF_WDS "mf.wds"
 #define MF_INF "mf.txt"
 #define DSZ 64		// data stack size (circular)
 #define RSZ 64		// return stack size (circular)
@@ -647,7 +648,7 @@ void dump_words(FILE *fp)
 	for (int i = num_words; i > 0; i--)
 	{
 		ENTRY_T *ep = (ENTRY_T *)&(the_dict[i]);
-		fprintf(fp, "%4d, %08lx, %08lx, %02x, %s\n", i, (CELL)ep, (ep->xt - (CELL)the_memory), ep->flags, ep->name);
+		fprintf(fp, "%4d, %08lx, %08lx, %02x, %s\n", i, (CELL)ep, ep->xt, ep->flags, ep->name);
 	}
 }
 
@@ -889,6 +890,20 @@ void write_bin_file()
 	output_fp = NULL;
 }
 
+void write_words_file()
+{
+	fopen_s(&output_fp, MF_WDS, "wb");
+	if (!output_fp)
+	{
+		printf("ERROR: Can't open output file!");
+		return;
+	}
+
+	int num = fwrite(the_dict, sizeof(ENTRY_T), num_words+1, output_fp);
+	fclose(output_fp);
+	output_fp = NULL;
+}
+
 // ------------------------------------------------------------
 int main(int argc, char **argv)
 {
@@ -906,6 +921,7 @@ int main(int argc, char **argv)
 	compile();
 	write_info_file();
 	write_bin_file();
+	write_words_file();
 	// printf("\n");
 
 	if (all_ok)
