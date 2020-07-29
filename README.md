@@ -8,7 +8,7 @@ http://www.ultratechnology.com/mfp21.htm
 It has circular stacks, for both data and return.
 It is very easy to add primitives and add any desired functionality.
 
-It is completely contained in one file, 'mf.c'.
+It is completely contained in under 1000 lines of C in one file, 'mf.c'.
 There is also a disassembler, in file 'mfd.c'.
 
 This is a token-threaded implementation. I ran some comparisons between that and a direct-threaded 
