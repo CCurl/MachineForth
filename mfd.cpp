@@ -19,6 +19,7 @@ typedef unsigned char BYTE;
 #define MF_SRC "mf.src"
 #define MF_BIN "mf.bin"
 #define MF_INF "mf.txt"
+#define MF_DIS "mf.dis"
 #define DSZ 64		// data stack size (circular)
 #define RSZ 64		// return stack size (circular)
 #define MAX_WORDS 2048
@@ -258,13 +259,15 @@ ENTRY_T *rfind_word(CELL XT)
 }
 
 // ------------------------------------------------------------
-void dis_program(CELL start)
+void do_dis(FILE *fp)
 {
+	const int lsz = 48, rsz = 128;
+	char left[lsz], right[rsz];
 	BYTE IR;
 	CELL reg1, reg2, reg3;
 	CELL xt;
 
-	PC = start;
+	PC = the_memory;
 	int call_depth = 1;
 
 
@@ -276,616 +279,115 @@ void dis_program(CELL start)
 		OPCODE_T *op = rfind_opcode(IR);
 		ENTRY_T *ep = rfind_word(xt);
 
+		right[0] = (char)NULL;
+		sprintf_s(left, lsz, "%08lx: %02x", PC, IR);
+		if (op)
+		{
+			sprintf_s(right, rsz, "%s", op->asm_instr);
+		}
+
+
 		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
 		switch (IR)
 		{
-		case NOP:
-			printf("NOP\n");
-			break;
+			case NOP:
+			case SETA:
+			case A:
+			case AFETCH:
+			case ASTORE:
+			case AFETCH1:
+			case ASTORE1:
+			case AT_PLUS:
+			case STORE_PLUS:
+			case AT_PLUS1:
+			case STORE_PLUS1:
+			case DUP:
+			case DROP:
+			case SWAP:
+			case OVER:
+			case COMMA:
+			case CCOMMA:
+			case EMIT:
+			case GOTORC:
+			case CLS:
+			case INC:
+			case DEC:
+			case HA:
+			case BA:
+			case CCALL:
+			case CRET:
+			case RET:
+			case SEMIC:
+			case IF:
+			case ELSE:
+			case THEN:
+			case BEGIN:
+			case AGAIN:
+			case UNTIL:
+			case WHILE:
+			case ADD:
+			case SUB:
+			case MULT:
+			case DIV:
+			case PLUS_STAR:
+			case DTOR:
+			case RTOD:
+			case AND:
+			case XOR:
+			case DOT:
+			case TIMES2:
+			case DIVIDE2:
+			case BYE:
+				break;
 
-			// usage: ( -- a ) - sets current address
-		case SETA:
-			printf("\n");
-			addr = pop();
-			break;
 
-			// usage: ( -- a ) - current address
-		case A:
-			push(addr);
-			break;
-
-			// usage: ( -- n ) - a@, fetch CELL at current address
-		case AFETCH:
-			reg3 = CELL_AT(addr);
-			push(reg3);
-			break;
-
-			// usage: ( n -- ) - store TOS to current address pointer
-		case ASTORE:
-			reg1 = pop();
-			CELL_AT(addr) = reg1;
-			break;
-
-			// usage: ( -- n ) - a@, fetch CELL at current address
-		case AFETCH1:
-			reg3 = BYTE_AT(addr);
-			push(reg3);
-			break;
-
-			// usage: ( n -- ) - store TOS to current address pointer
-		case ASTORE1:
-			reg1 = pop();
-			BYTE_AT(addr) = (BYTE)reg1;
-			break;
-
-			// usage: ( -- n ) - a@, fetch CELL, increment a by CELL
-		case AT_PLUS:
-			reg1 = CELL_AT(addr);
-			push(reg1);
-			addr += CELL_SZ;
-			break;
-
-			// usage: ( n -- ) - a!, store CELL, increment a by CELL
-		case STORE_PLUS:
-			reg1 = pop();
-			CELL_AT(addr) = reg1;
-			addr += CELL_SZ;
-			break;
-
-			// usage: ( -- n ) - fetch BYTE at a@, increment a by 1
-		case AT_PLUS1:
-			reg1 = BYTE_AT(addr);
-			push(reg1);
-			++addr;
-			break;
-
-			// usage: ( n -- ) - store BYTE to a!, increment a by 1
-		case STORE_PLUS1:
-			reg1 = pop();
-			BYTE_AT(addr) = (BYTE)reg1;
-			++addr;
-			break;
-
-			// usage: ( n -- ) - MACRO: compile a literal
-		case CLIT:
-			CComma(LIT);
-			Comma(pop());
-			PC += CELL_SZ;
-			break;
+			case CLIT:
+				CComma(LIT);
+				Comma(pop());
+				PC += CELL_SZ;
+				break;
 
 			// usage: ( -- n ) - push n onto the stack
-		case LIT:
-			reg1 = CELL_AT(PC);
-			push(reg1);
-			PC += CELL_SZ;
-			break;
+			case LIT:
+				reg1 = CELL_AT(PC);
+				push(reg1);
+				PC += CELL_SZ;
+				break;
 
-			// usage: ( n -- n n ) - dups TOS
-		case DUP:
-			reg1 = TOS;
-			push(reg1);
-			break;
-
-			// usage: ( n -- )
-		case DROP:
-			reg1 = pop();
-			break;
-
-			// usage: ( n1 n2 -- n2 n1 )
-		case SWAP:
-			reg1 = pop();
-			reg2 = pop();
-			push(reg1);
-			push(reg2);
-			break;
-
-			// usage: ( n1 n2 -- n1 n2 n1 ) - standard OVER
-		case OVER:
-			reg1 = pop();
-			reg2 = TOS;
-			push(reg1);
-			push(reg2);
-			break;
-
-			// usage: ( n -- ) - Standard , behavior
-		case COMMA:
-			CELL_AT(HERE) = pop();
-			HERE += CELL_SZ;
-			break;
-
-			// usage: ( n -- ) - Standard c, behavior
-		case CCOMMA:
-			*(BYTE*)(HERE++) = (BYTE)pop();
-			break;
-
-			// usage: ( c -- ) - prints char to  screen
-		case EMIT:
-			reg1 = pop();
-			printf("%c", (reg1 & 0xFF));
-			break;
-
-			// usage: ( r c -- ) - move cursor to screen pos (r,c)
-		case GOTORC:
-		{
-			COORD pos;
-			reg1 = pop();
-			reg2 = pop();
-			pos.Y = (short)reg2;
-			pos.X = (short)reg1;
-			SetConsoleCursorPosition(hStdout, pos);
-		}
-		break;
-
-		// usage: ( -- ) - clears the screen, moces cursor to (0,0)
-		case CLS:
-		{
-			COORD pos = { 0, 0 };
-			GetConsoleScreenBufferInfo(hStdout, &csbi);
-			reg1 = csbi.dwSize.X * csbi.dwSize.Y;
-			FillConsoleOutputCharacter(hStdout, ' ', reg1, pos, &reg2);
-		}
-		break;
-
-		// usage: ( n -- n+1 ) - increments TOS
-		case INC:
-			TOS++;
-			break;
-
-			// usage: ( n -- n-1 ) - decrements TOS
-		case DEC:
-			TOS--;
-			break;
-
-			// usage: ( -- a ) - push next code address
-		case HA:
-			push((CELL)&HERE);
-			break;
-
-			// usage: ( -- a ) - push next code address
-		case BA:
-			push((CELL)&BASE);
-			break;
-
-			// usage: ( addr -- ) - MACRO: compile call to addr
-		case CCALL:
-			CComma(CALL);
-			reg1 = pop();
-			Comma(reg1);
-			break;
-
-			// usage: ( -- ) - MACRO: compile RET
-		case CRET:
-			CComma(RET);
-			break;
-
-			// usage: ( -- ) - calls subroutine at (PC)
-		case CALL:
-			reg1 = CELL_AT(PC);
-			PC += CELL_SZ;
-			rpush(PC);
-			PC = reg1;
-			++call_depth;
-			break;
+			case CALL:
+				reg1 = CELL_AT(PC);
+				PC += CELL_SZ;
+				rpush(PC);
+				PC = reg1;
+				++call_depth;
+				break;
 
 			// usage: ( -- ) - return from subroutine
-		case RET:
-			PC = rpop();
-			if (--call_depth < 1)
-				return;
-			break;
-
-			// usage: ( -- ) - MACRO: end of word
-		case SEMIC:
-			CComma(RET);
-			STATE = 0;
-			break;
-
-			// usage: ( -- ) - jumps to (PC)
-		case JMP:
-			PC = CELL_AT(PC);
-			break;
+			case JMP:
+				PC = CELL_AT(PC);
+				break;
 
 			// usage: ( n -- n ) - if TOS=0, jump
-		case JMPZ:
-			if (TOS == 0)
-				PC = CELL_AT(PC);
-			else
-				PC += CELL_SZ;
-			break;
+			case JMPZ:
+				if (TOS == 0)
+					PC = CELL_AT(PC);
+				else
+					PC += CELL_SZ;
+				break;
 
 			// usage: ( n -- n ) - if TOS!=0, jump
-		case JNZ:
-			if (TOS != 0)
-				PC = CELL_AT(PC);
-			else
-				PC += CELL_SZ;
-			break;
+			case JNZ:
+				if (TOS != 0)
+					PC = CELL_AT(PC);
+				else
+					PC += CELL_SZ;
+				break;
 
-			// usage: ( -- a ) - MACRO: if (jmpz placeholder)
-		case IF:
-			CComma(JMPZ);
-			push(HERE);
-			Comma(0);
-			break;
-
-			// usage: ( -- a ) - MACRO: else ()
-		case ELSE:
-			reg1 = pop();
-			CComma(JMP);
-			push(HERE);
-			Comma(0);
-			CELL_AT(reg1) = HERE;
-			break;
-
-			// usage: ( -- a ) - MACRO: then
-		case THEN:
-			reg1 = pop();
-			CELL_AT(reg1) = HERE;
-			break;
-
-			// usage: ( -- a ) - MACRO: push HERE
-		case BEGIN:
-			push(HERE);
-			break;
-
-			// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
-		case AGAIN:
-			reg1 = pop();
-			CComma(JMP);
-			Comma(reg1);
-			break;
-
-			// usage: ( a -- ) - MACRO: compile if TOS=false, jump to a
-		case UNTIL:
-			reg1 = pop();
-			CComma(JMPZ);
-			Comma(reg1);
-			break;
-
-			// usage: ( a -- ) - MACRO: compile if TOS=true, jump to a
-		case WHILE:
-			reg1 = pop();
-			CComma(JNZ);
-			Comma(reg1);
-			break;
-
-			// usage: ( n1 n2 -- n1+n2 ) - adds n1 and n2
-		case ADD:
-			reg1 = pop();
-			TOS += reg1;
-			break;
-
-			// usage: ( n1 n2 -- n1-n2 ) - subtracts n2 from n1
-		case SUB:
-			reg1 = pop();
-			TOS -= reg1;
-			break;
-
-			// usage: ( n1 n2 -- n1*n2 ) - multiplies n1 and n2
-		case MULT:
-			reg1 = pop();
-			TOS *= reg1;
-			break;
-
-			// usage: ( n1 n2 -- n1/n2 ) - divides n1 by n2
-		case DIV:
-			reg1 = pop();
-			TOS /= reg1;
-			break;
-
-			// usage: ( n1 n2  -- n ) - ???
-		case PLUS_STAR:
-			reg1 = pop();
-			TOS += reg1;
-			push(99999);
-			break;
-
-			// usage: ( D:n -- R:n ) - moves TOS to return stack
-		case DTOR:
-			rpush(pop());
-			break;
-
-			// usage: ( R:n -- D:n ) - moves return stack TOS to data stack
-		case RTOD:
-			push(rpop());
-			break;
-
-			// usage: ( n1 n2 -- n1&n2 ) - bitwise AND
-		case AND:
-			reg1 = pop();
-			TOS &= reg1;
-			break;
-
-			// usage: ( n1 n2 -- n1^n2 ) - bitwise XOR
-		case XOR:
-			reg1 = pop();
-			TOS ^= reg1;
-			break;
-
-			// usage: ( n1 -- ) - print number on TOS
-		case DOT:
-			reg1 = pop();
-			if (BASE == 16)
-				printf("$%X", reg1);
-			else if (BASE == 10)
-				printf("#%d", reg1);
-			else
-				printf("(%d in base %d)", reg1, BASE);
-			break;
-
-			// usage: ( n1 -- n1*2 ) - multiply TOS by 2
-		case TIMES2:
-			TOS *= 2;
-			break;
-
-			// usage: ( n1 -- n1/2 ) - divide TOS by 2
-		case DIVIDE2:
-			TOS /= 2;
-			break;
-
-			// usage: ( -- ) - breaks out of loop
-		case BYE:
-			return;
-
-		default:
-			printf("Unknown IR (%02x) at PC=%08lx.", IR, PC - 1);
-			return;
+			default:
+				printf("Unknown IR (%02x) at PC=%08lx.", IR, PC - 1);
+				return;
 		}
 	}
-}
-
-// ------------------------------------------------------------
-void define_word(char* word)
-{
-	ENTRY_T* ep = (ENTRY_T*)&(the_dict[++num_words]);
-	size_t maxLen = sizeof(ep->name) - 1;
-	if (StringLen(word) > maxLen)
-		word[maxLen] = (char)0;
-
-	ep->xt = HERE;
-	ep->flags = 0;
-	StringCopy(ep->name, word);
-}
-
-ENTRY_T* find_word(const char* word)
-{
-	for (int i = num_words; i > 0; i--)
-	{
-		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
-		if (_stricmp(word, ep->name) == 0)
-		{
-			return ep;
-		}
-	}
-	return NULL;
-}
-
-void dump_words(FILE* fp)
-{
-	fprintf(output_fp, "\nWords:\n");
-	fprintf(output_fp, " seq  addr      xt        flg name \n");
-	fprintf(output_fp, "----------------------------------------------\n");
-
-	for (int i = num_words; i > 0; i--)
-	{
-		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
-		fprintf(fp, "%4d, %08lx, %08lx, %02x, %s\n", i, (CELL)ep, (ep->xt - (CELL)the_memory), ep->flags, ep->name);
-	}
-}
-
-// ------------------------------------------------------------
-// Returns a pointer to the first char after the first word in the line
-char* getword(char* line, char* word)
-{
-	char* cp = word;
-
-	// Skip beginning WS
-	while ((*line) && (*line <= ' '))
-	{
-		line++;
-	}
-
-	// Copy chars up to ' ' or EOL or 1st non-printable char
-	while ((*line) && (*line > ' '))
-	{
-		*(cp++) = *(line++);
-	}
-	*cp = 0;
-
-	return line;
-}
-
-// ------------------------------------------------------------
-int is_number(char* word, long* the_num, int base)
-{
-	const char* possible_chars = "0123456789ABCDEF";
-	char valid_chars[24];
-	long my_num = 0;
-	char* w = word;
-	int is_neg = 0;
-
-	if ((word[0] == '\'') && (word[2] == '\'') && (word[3] == (char)0))
-	{
-		*the_num = word[1];
-		return 1;
-	}
-
-	if (*w == '%') { base = 2; ++w; }
-	if (*w == '#') { base = 10; ++w; }
-	if (*w == '$') { base = 16; ++w; }
-
-	StringCopy(valid_chars, possible_chars);
-	valid_chars[base] = (char)0;
-
-	// One leading minus sign is OK
-	if ((base == 10) && (*w == '-'))
-	{
-		is_neg = 1;
-		w++;
-	}
-
-	while (*w)
-	{
-		char ch = *(w++);
-		ch = ToUpper(ch);
-		char* pos = strchr(valid_chars, ch);
-		if (pos == 0)
-			return 0;
-
-		BYTE digit = (BYTE)(pos - valid_chars);
-		my_num = (my_num * base) + digit;
-	}
-
-	*the_num = is_neg ? -my_num : my_num;
-	return 1;
-}
-
-// ------------------------------------------------------------
-char* parseword(char* line, char* word)
-{
-	if (_stricmp(word, ":") == 0)
-	{
-		line = getword(line, word);
-		if (StringLen(word) > 0)
-		{
-			define_word(word);
-			STATE = 1;
-		}
-		return line;
-	}
-	for (int i = 0; ; i++)
-	{
-		OPCODE_T op = theOpcodes[i];
-		if (op.asm_instr == NULL)
-		{
-			break;
-		}
-		if (_stricmp(word, op.asm_instr) == 0)
-		{
-			if ((STATE == 0) || (op.flags == IS_IMMEDIATE))
-			{
-				PC = HERE + 0x100;
-				CELL_AT(PC) = op.opcode;
-				CELL_AT(PC + 1) = RET;
-				run_program(PC);
-			}
-			else
-			{
-				CComma(op.opcode);
-			}
-			return line;
-		}
-	}
-	ENTRY_T* ep = find_word(word);
-	if (ep)
-	{
-		if ((STATE == 0) || (ep->flags == IS_IMMEDIATE))
-		{
-			run_program(ep->xt);
-		}
-		else
-		{
-			CComma(CALL);
-			Comma(ep->xt);
-		}
-		return line;
-	}
-
-	long num = 0;
-	if (is_number(word, &num, BASE))
-	{
-		push((CELL)num);
-		if (STATE == 1)
-		{
-			CComma(LIT);
-			Comma(pop());
-		}
-		return line;
-	}
-	printf("line #%d, [%s], '%s'??", line_num, line, word);
-	all_ok = 0;
-	return line;
-}
-
-void parse_line(char* line)
-{
-	char word[64];
-	line = getword(line, word);
-	while (word[0])
-	{
-		if ((StringLen(word) == 1) && (word[0] == '\\'))
-			return;
-		line = parseword(line, word);
-		line = getword(line, word);
-	}
-}
-
-void compile()
-{
-	char buf[256];
-
-	fopen_s(&input_fp, MF_SRC, "rt");
-	if (!input_fp)
-	{
-		printf("can't open input file!");
-		return;
-	}
-
-	HERE = (CELL)the_memory;
-	CComma(JMP);
-	Comma(0);
-	line_num = 0;
-
-	while (fgets(buf, 256, input_fp) == buf)
-	{
-		++line_num;
-		parse_line(buf);
-	}
-
-	CELL_AT(the_memory + 1) = the_dict[num_words].xt;
-
-	fclose(input_fp);
-	input_fp = NULL;
-}
-
-// ------------------------------------------------------------
-void write_info_file()
-{
-	fopen_s(&output_fp, MF_INF, "wt");
-	if (!output_fp)
-	{
-		printf("ERROR: Can't open info file!");
-		return;
-	}
-
-	fprintf(output_fp, "Opcodes:\n-----------------------------\n");
-	for (int i = 0; ; i++)
-	{
-		OPCODE_T op = theOpcodes[i];
-		if (op.asm_instr == NULL)
-			break;
-		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
-	}
-
-	fprintf(output_fp, "\nthe_memory: %08lx\n", (CELL)the_memory);
-	dump_words(output_fp);
-
-	fclose(output_fp);
-	output_fp = NULL;
-}
-
-void write_bin_file()
-{
-	fopen_s(&output_fp, MF_BIN, "wb");
-	if (!output_fp)
-	{
-		printf("ERROR: Can't open output file!");
-		return;
-	}
-
-	int num = fwrite(the_memory, 1, MEM_SZ, output_fp);
-	fclose(output_fp);
-	output_fp = NULL;
 }
 
 // ------------------------------------------------------------
@@ -894,25 +396,29 @@ int main(int argc, char** argv)
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	DSP = dstk;
-	the_memory = (BYTE*)malloc(MEM_SZ);
-	memset(the_memory, 0, MEM_SZ);
-
-	CELL dict_sz = MAX_WORDS * sizeof(ENTRY_T);
-	the_dict = (ENTRY_T*)malloc(dict_sz);
-	memset(the_dict, 0, dict_sz);
-
-	compile();
-	write_info_file();
-	write_bin_file();
-	// printf("\n");
-
-	if (all_ok)
+	fopen_s(&input_fp,  MF_BIN, "rb");
+	if (!input_fp)
 	{
-		CELL st = GetTickCount();
-		run_program((CELL)the_memory);
-		CELL tt = GetTickCount() - st;
-		printf("program ran for %d.%03d seconds\n", tt / 1000, tt % 1000);
+		printf("Cannot open input file.");
+		return 1;
 	}
+	fseek(input_fp, 0, SEEK_END);
+	long sz = ftell(input_fp);
+
+	the_memory = (BYTE*)malloc(sz);
+	fseek(input_fp, 0, SEEK_END);
+	fread(the_memory, 1, sz, input_fp);
+	fclose(input_fp);
+
+	fopen_s(&output_fp, MF_DIS, "wt");
+	if (!output_fp)
+	{
+		printf("Cannot open output file.");
+		return 1;
+	}
+
+	do_dis(output_fp);
+	fclose(output_fp);
+
 	return 0;
 }

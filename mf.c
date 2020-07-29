@@ -73,7 +73,7 @@ typedef struct {
 	const char *asm_instr;
 	const BYTE opcode;
 	const BYTE flags;
-} OPCODE_T;
+} PRIM_T;
 
 BYTE* the_memory = NULL;
 ENTRY_T* the_dict = NULL;
@@ -90,12 +90,12 @@ int line_num = 0;
 // ------------------------------------------------------------
 // To add functionality:
 // 1. Add an entry to the enum below
-// 2. Add an entry to the array of OPCODE_T records later in the file.
+// 2. Add an entry to the array of PRIM_T records later in the file.
 // 3. Add a case to the switch in run_program()
 // ------------------------------------------------------------
 
 enum prims {
-	NOP = 0, SETA, A,  SETS, S, SETD, D, 
+	NOP = 0, SETA, A,  SETS, SRC, SETD, DST, 
 	FETCH, FETCH1, CFETCH, CFETCH1, 
 	STORE, STORE1, CSTORE, CSTORE1,
 	CLIT, LIT, DUP, DROP, SWAP, OVER, COMMA, CCOMMA,
@@ -108,14 +108,14 @@ enum prims {
 } OPCODES;
 
 // ------------------------------------------------------------
-OPCODE_T theOpcodes[] = {
+PRIM_T thePrims[] = {
 		  { "nop",     NOP,         0 }
 		, { ">a",      SETA,        0 }
 		, { "a",       A,           0 }
 		, { ">src",    SETS,        0 }
-		, { "src",     S,           0 }
+		, { "src",     SRC,         0 }
 		, { ">dst",    SETD,        0 }
-		, { "dst",     D,           0 }
+		, { "dst",     DST,         0 }
 		, { "@@",      FETCH,       0 }
 		, { "@@+",     FETCH1,      0 }
 		, { "c@@",     CFETCH,      0 }
@@ -264,75 +264,75 @@ void run_program(CELL start)
 			PC += CELL_SZ;
 			break;
 
-		// usage: ( -- a ) - sets current address
+		// usage: >a ( n -- ) \ sets a (a temp variable)
 		case SETA:
 			addr = pop();
 			break;
 
-		// usage: ( -- a ) - current address
+		// usage: a ( -- n ) \ current value of a
 		case A:
 			push(addr);
 			break;
 
-		// usage: ( -- a ) - sets current address
+		// usage: >src ( n -- ) \ sets src
 		case SETS:
 			src = pop();
 			break;
 
-		// usage: ( -- a ) - current address
-		case S:
+		// usage: src ( -- n ) \ current value of src
+		case SRC:
 			push(src);
 			break;
 
-		// usage: ( -- a ) - sets current address
+		// usage: >dst ( n -- ) \ sets dest
 		case SETD:
 			dst = pop();
 			break;
 
-		// usage: ( -- a ) - current address
-		case D:
+		// usage: dst ( -- n ) \ current value of dest
+		case DST:
 			push(dst);
 			break;
 
-		// usage: ( -- n ) - @@, fetch CELL at src
+		// usage: @@ ( -- n ) \ fetch CELL at src
 		case FETCH:
 			push(CELL_AT(src));
 			break;
 
-		// usage: ( -- n ) - @+, fetch CELL, increment src by CELL
+		// usage: @@+ ( -- n ) \ fetch CELL at src, increment src by CELL
 		case FETCH1:
 			push(CELL_AT(src));
 			src += CELL_SZ;
 			break;
 
-		// usage: ( -- n ) - c@@, fetch BYTE at src
+		// usage: c@@ ( -- n ) \ fetch BYTE at src
 		case CFETCH:
 			push(BYTE_AT(src));
 			break;
 
-		// usage: ( -- n ) - c@+, fetch NYTE, increment src by 1
+		// usage: c@+ ( -- n ) \ fetch BYTE at src, increment src by 1
 		case CFETCH1:
 			push(BYTE_AT(src));
 			src++;
 			break;
 
-		// usage: ( n -- ) - !, store TOS to dst (CELL)
+		// usage: !! (n--) \ store TOS to dst(CELL)
 		case STORE:
 			CELL_AT(dst) = pop();
 			break;
 
-		// usage: ( n -- ) - c!, store TOS to dst (BYTE)
+		// usage: c!! ( n -- ) \ store TOS to dst (BYTE)
 		case CSTORE:
 			BYTE_AT(dst) = (BYTE)pop();
 			break;
 
-		// usage: ( n -- ) - !+, store TOS to dst (CELL), next CELL
+		// usage: !!+ (n--) \ store TOS to dst(CELL), increment dst by CELL
 		case STORE1:
 			CELL_AT(dst) = pop();
 			dst += CELL_SZ;
 			break;
 
-		// usage: ( n -- ) - c!+, store TOS to dst (CELL), next BYTE
+		// usage: c!!+ ( n -- ) \ store TOS to dst (BYTE), increment dst by 1
 		case CSTORE1:
 			BYTE_AT(dst) = (BYTE)pop();
 			dst++;
@@ -751,7 +751,7 @@ char *parseword(char *line, char *word)
 
 	for (int i = 0; ; i++)
 	{
-		OPCODE_T op = theOpcodes[i];
+		PRIM_T op = thePrims[i];
 		if (op.asm_instr == NULL)
 		{
 			break;
@@ -862,7 +862,7 @@ void write_info_file()
 	fprintf(output_fp, "Opcodes:\n-----------------------------\n");
 	for (int i = 0; ; i++)
 	{
-		OPCODE_T op = theOpcodes[i];
+		PRIM_T op = thePrims[i];
 		if (op.asm_instr == NULL)
 			break;
 		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
