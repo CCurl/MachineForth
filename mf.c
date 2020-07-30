@@ -16,7 +16,7 @@ typedef unsigned char BYTE;
 // ------------------------------------------------------------
 // Things that would change from usage to usage
 #define MEM_SZ_K 1
-#define BASE_FN "ex"
+#define BASE_FN "mf"
 #define DSZ 64		// data stack size (circular)
 #define RSZ 64		// return stack size (circular)
 #define MAX_WORDS 2048
