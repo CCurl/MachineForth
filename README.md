@@ -8,12 +8,12 @@ http://www.ultratechnology.com/mfp21.htm
 It has circular stacks, for both data and return.
 It is very easy to add primitives and add any desired functionality.
 
-It is completely contained in one file, 'mf.c'.
+It is completely contained in under 1000 lines of C in one file, 'mf.c'.
 There is also a disassembler, in file 'mfd.c'.
 
-This is a byte-code threaded implementation. I ran some comparisons between that and a direct-threaded 
-implementation.  I was surprised to find that the byte-code threaded implementation ran faster.  
-It was not much faster, over 500 million iterations, about .4 seconds for the following simple loop:
+This is a token-threaded implementation. I ran some comparisons between that and a direct-threaded 
+implementation.  I was surprised to find that the byte-code threaded implementation ran faster. It was not 
+much faster, over 500 million iterations, about .4 seconds for the following simple loop:
 
 : bench 1000 dup * 500 * begin 1- while drop ;    \ This runs in about 1.2 seconds
 
