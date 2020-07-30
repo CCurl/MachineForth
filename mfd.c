@@ -40,29 +40,8 @@ CELL STOP_HERE = 0;
 #define CELL_SZ 4
 
 // ------------------------------------------------------------
-#ifdef __VS19__
 CELL PC;
 CELL* DSP;
-#else
-register CELL PC asm("esi");
-register CELL* DSP asm("edi");
-#endif
-
-CELL addr;
-CELL tmp;
-
-// Circular stacks - no over/under-flow!
-CELL dstk[DSZ];
-CELL* DSS = dstk;
-CELL* DSE = &(dstk[DSZ - 1]);
-
-CELL rstk[RSZ];
-CELL* RSS = rstk;
-CELL* RSE = &(rstk[RSZ - 1]);
-CELL* RSP = rstk;
-
-#define TOS  (*DSP)
-#define TOSR (*RSP)
 
 #define IS_IMMEDIATE  0x01
 #define IS_INLINE     0x02
@@ -83,13 +62,8 @@ BYTE* the_memory = NULL;
 ENTRY_T* the_dict = NULL;
 int num_words = 0;
 
-int all_ok = 1;
-int line_num = 0;
-
 #define BYTE_AT(src) (*(BYTE *)(src))
 #define CELL_AT(src) (*(CELL *)(src))
-#define CComma(val)  *(BYTE *)(HERE++) = val
-#define Comma(val)   *(CELL *)HERE = val; HERE += CELL_SZ
 
 // ------------------------------------------------------------
 // To add functionality:
@@ -193,11 +167,6 @@ void StringCopy(char *dst, const char *src)
 	StringCat(dst, src);
 }
 
-char ToUpper(char c)
-{
-	return (c < 'a') ? c : (c > 'z') ? c : (c - 0x20);
-}
-
 size_t StringLen(char *cp)
 {
 	int i = 0;
@@ -217,36 +186,6 @@ void fopen_s(FILE** pfp, const char *nm, const char *mode)
 // ------------------------------------------------------------
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-void push(CELL v)
-{
-	if (++DSP > DSE)
-		DSP = DSS;
-	*DSP = v;
-}
-
-CELL pop()
-{
-	CELL v = *DSP;
-	if (--DSP < DSS)
-		DSP = DSE;
-	return v;
-}
-
-// ------------------------------------------------------------
-void rpush(CELL v)
-{
-	if (++RSP > RSE)
-		RSP = RSS;
-	*RSP = v;
-}
-
-CELL rpop()
-{
-	CELL v = *RSP;
-	if (--RSP < RSS)
-		RSP = RSE;
-	return v;
-}
 
 PRIM_T *rfind_opcode(BYTE IR)
 {
