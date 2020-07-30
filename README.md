@@ -28,3 +28,17 @@ Machine Forth can be built using either Visual Studio, or GCC.
 
 - For GCC, it can be built like this: gcc -g -Ofast -o mf mf.c
   Of course, in a Windows environment, using GCC depends on having it installed (see MinGW).
+  There is also a batch file I created, make.bat
+
+  'make mf' makes the mf.exe, maching forth
+  'make ma' creates a mf.s assembly listing file
+  'make mfd' makes the disassembler
+
+Running ...
+
+- mf: reads mf.src for its input. It then runs the built program, and writes output files:
+    - mf.bin, the binary representation of the program.
+    - mf.txt, a human-readable description of the generated program.
+    - mf.wds, a binary representation of the dictionary.
+
+- mfd: reads mf.bin and mf.wds, and creates mf.dis, a disassembly of the generated program.
