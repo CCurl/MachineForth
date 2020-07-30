@@ -9,6 +9,7 @@
 
 #include <windows.h> 
 #include <stdio.h>
+#include <string.h>
 
 typedef unsigned long CELL;
 typedef unsigned char BYTE;
@@ -276,10 +277,13 @@ ENTRY_T *rfind_word(CELL XT)
 	return NULL;
 }
 
+#define lsz  48
+#define rsz 128
+#define osz  64
+
 // ------------------------------------------------------------
 void do_dis(FILE *fp)
 {
-	const int lsz = 48, rsz = 128, osz = 64;
 	char left[lsz], right[rsz], other[osz];
 	BYTE IR;
 	CELL reg1, reg2, reg3;
@@ -297,17 +301,17 @@ void do_dis(FILE *fp)
 
 		IR = BYTE_AT(PC);
 		xt = CELL_AT(PC);
-
+ 
 		PRIM_T *op = rfind_opcode(IR);
 		ENTRY_T *ep = rfind_word(xt);
 
-		right[0] = (char)NULL;
-		sprintf_s(left, lsz, "%08lx: %02x", PC-offset, IR);
+		right[0] = (char)0;
+		snprintf(left, lsz, "%08lx: %02x", PC-offset, IR);
 		++PC;
 
 		if (op)
 		{
-			sprintf_s(right, rsz, "%s", op->asm_instr);
+			snprintf(right, rsz, "%s", op->asm_instr);
 		}
 
 		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
@@ -369,7 +373,7 @@ void do_dis(FILE *fp)
 
 
 			case CLIT:
-				sprintf_s(other, osz, " %08lx", CELL_AT(PC));
+				snprintf(other, osz, " %08lx", CELL_AT(PC));
 				StringCat(left, other);
 				StringCat(right, other);
 				PC += CELL_SZ;
@@ -377,7 +381,7 @@ void do_dis(FILE *fp)
 
 			// usage: ( -- n ) - push n onto the stack
 			case LIT:
-				sprintf_s(other, osz, " %08lx", CELL_AT(PC));
+				snprintf(other, osz, " %08lx", CELL_AT(PC));
 				StringCat(left, other);
 				StringCat(right, other);
 				PC += CELL_SZ;
@@ -385,13 +389,13 @@ void do_dis(FILE *fp)
 
 			case CALL:
 				xt = CELL_AT(PC);
-				sprintf_s(other, osz, " %08lx", xt);
+				snprintf(other, osz, " %08lx", xt);
 				StringCat(left, other);
 				StringCat(right, other);
 				ep = rfind_word(xt);
 				if (ep)
 				{
-					sprintf_s(other, osz, " (%s)", ep->name);
+					snprintf(other, osz, " (%s)", ep->name);
 					StringCat(right, other);
 				}
 				PC += CELL_SZ;
@@ -400,13 +404,13 @@ void do_dis(FILE *fp)
 			// usage: ( -- ) - return from subroutine
 			case JMP:
 				xt = CELL_AT(PC);
-				sprintf_s(other, osz, " %08lx", xt);
+				snprintf(other, osz, " %08lx", xt);
 				StringCat(left, other);
 				StringCat(right, other);
 				ep = rfind_word(xt);
 				if (ep)
 				{
-					sprintf_s(other, osz, " (%s)", ep->name);
+					snprintf(other, osz, " (%s)", ep->name);
 					StringCat(right, other);
 				}
 				PC += CELL_SZ;
@@ -414,7 +418,7 @@ void do_dis(FILE *fp)
 
 			// usage: ( n -- n ) - if TOS=0, jump
 			case JMPZ:
-				sprintf_s(other, osz, " %08lx", CELL_AT(PC));
+				snprintf(other, osz, " %08lx", CELL_AT(PC));
 				StringCat(left, other);
 				StringCat(right, other);
 				PC += CELL_SZ;
@@ -422,7 +426,7 @@ void do_dis(FILE *fp)
 
 			// usage: ( n -- n ) - if TOS!=0, jump
 			case JNZ:
-				sprintf_s(other, osz, " %08lx", CELL_AT(PC));
+				snprintf(other, osz, " %08lx", CELL_AT(PC));
 				StringCat(left, other);
 				StringCat(right, other);
 				PC += CELL_SZ;

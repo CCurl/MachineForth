@@ -1,19 +1,19 @@
 \ TEST
 variable test-var
 : @ >src @@ ; : ! >dst !! ; : c@ >src c@@ ; : c! >dst c!! ;
-: here (h) @ ; : hex $10 base ! ; : decimal #10 base ! ;
+: here (h) @ ; 
+: hex $10 base ! ; : decimal #10 base ! ; : binary 2 base ! ;
 
 : space #32 emit ; : cr #13 emit #10 emit ; : . (.) space ; 
 
 : ok space 'o' emit 'k' emit cr ;
-: .t 't' emit 'e' emit 's' emit 't' emit '.' dup dup emit emit emit ;
+: .t 't' emit 'e' emit 's' emit 't' emit '.' dup dup emit emit emit space ;
 : try-if if 'y' else 'n' then emit drop space ;
-: test .t #1000 #1000 * #500 * begin 1- while drop '!' emit ;
+: bench #1000 dup * #500 * begin 1- while drop ;
 : test2 1 try-if 0 try-if here c@ . $44 c, c@@ . ;
-: main test ok ;
 
 : x1 here $40 - >src $20 begin src . c@@+ . cr 1- while drop ;
-: x test2 x1 test space ;
+: x bench ret test2 hex x1 decimal cr space ;
+: main .t bench ok ;
 
-hex
-here dup . the-memory dup . - . cr cr
+cr hex here dup . the-memory dup . - decimal . cr cr

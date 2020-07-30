@@ -584,12 +584,26 @@ void run_program(CELL start)
 		// usage: ( n1 -- ) - print number on TOS
 		case DOT:
 			reg1 = pop();
-			if (BASE == 16)
+			if (reg1 == 0)
+				printf("0");
+			else if (BASE == 16)
 				printf("$%02X", reg1);
 			else if (BASE == 10)
 				printf("#%d", reg1);
 			else
-				printf("(%d in base %d)", reg1, BASE);
+			{
+				char buf[64];
+				char *cp = buf + 60;
+				*cp = (char)0;
+				while (reg1 != 0)
+				{
+					reg2 = reg1 % BASE;
+					reg1 = reg1 / BASE;
+					reg3 = '0' + reg2;
+					*(--cp) = (char)reg3;
+				}
+				printf("%s", cp);
+			}
 			break;
 
 		// usage: ( n1 -- n1*2 ) - multiply TOS by 2
@@ -869,7 +883,7 @@ void write_info_file()
 		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
 	}
 
-	fprintf(output_fp, "\nthe_memory: %08lx\n", (CELL)the_memory);
+	fprintf(output_fp, "\nthe_memory: %08lx, HERE: %08lx\n", (CELL)the_memory, HERE);
 	dump_words(output_fp);
 
 	fclose(output_fp);
@@ -922,7 +936,6 @@ int main(int argc, char **argv)
 	write_info_file();
 	write_bin_file();
 	write_words_file();
-	// printf("\n");
 
 	if (all_ok)
 	{
