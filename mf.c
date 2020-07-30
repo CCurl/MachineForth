@@ -16,10 +16,7 @@ typedef unsigned char BYTE;
 // ------------------------------------------------------------
 // Things that would change from usage to usage
 #define MEM_SZ_K 1
-#define MF_SRC "mf.src"
-#define MF_BIN "mf.bin"
-#define MF_WDS "mf.wds"
-#define MF_INF "mf.txt"
+#define BASE_FN "ex"
 #define DSZ 64		// data stack size (circular)
 #define RSZ 64		// return stack size (circular)
 #define MAX_WORDS 2048
@@ -173,6 +170,16 @@ PRIM_T thePrims[] = {
 
 void StringCopy(char *dst, const char *src)
 {
+	while (*src)
+		*(dst++) = *(src++);
+	*dst = (char)0;
+}
+
+void StringCat(char *dst, const char *src)
+{
+	while (*dst)
+		dst++;
+
 	while (*src)
 		*(dst++) = *(src++);
 	*dst = (char)0;
@@ -856,11 +863,13 @@ void parse_line(char *line)
 	}
 }
 
-void compile()
+void compile(char *base_fn)
 {
 	char buf[256];
+	StringCopy(buf, base_fn);
+	StringCat(buf, ".src");
 
-	fopen_s(&input_fp, MF_SRC, "rt");
+	fopen_s(&input_fp, buf, "rt");
 	if (!input_fp)
 	{
 		printf("can't open input file!");
@@ -890,9 +899,13 @@ void compile()
 }
 
 // ------------------------------------------------------------
-void write_info_file()
+void write_info_file(char *base_fn)
 {
-	fopen_s(&output_fp, MF_INF, "wt");
+	char buf[256];
+	StringCopy(buf, base_fn);
+	StringCat(buf, ".txt");
+
+	fopen_s(&output_fp, buf, "wt");
 	if (!output_fp)
 	{
 		printf("ERROR: Can't open info file!");
@@ -916,9 +929,13 @@ void write_info_file()
 	output_fp = NULL;
 }
 
-void write_bin_file()
+void write_bin_file(char *base_fn)
 {
-	fopen_s(&output_fp, MF_BIN, "wb");
+	char buf[256];
+	StringCopy(buf, base_fn);
+	StringCat(buf, ".bin");
+
+	fopen_s(&output_fp, buf, "wb");
 	if (!output_fp)
 	{
 		printf("ERROR: Can't open output file!");
@@ -930,9 +947,13 @@ void write_bin_file()
 	output_fp = NULL;
 }
 
-void write_words_file()
+void write_words_file(char *base_fn)
 {
-	fopen_s(&output_fp, MF_WDS, "wb");
+	char buf[256];
+	StringCopy(buf, base_fn);
+	StringCat(buf, ".wds");
+
+	fopen_s(&output_fp, buf, "wb");
 	if (!output_fp)
 	{
 		printf("ERROR: Can't open output file!");
@@ -958,10 +979,10 @@ int main(int argc, char **argv)
 	the_dict = (ENTRY_T *)malloc(dict_sz);
 	memset(the_dict, 0, dict_sz);
 
-	compile();
-	write_info_file();
-	write_bin_file();
-	write_words_file();
+	compile(BASE_FN);
+	write_info_file(BASE_FN);
+	write_bin_file(BASE_FN);
+	write_words_file(BASE_FN);
 
 	if (all_ok)
 	{
