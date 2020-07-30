@@ -471,10 +471,24 @@ void dis_words(FILE *fp)
 	fprintf(fp, ";   XT     Flags  Name\n");
 	fprintf(fp, ";------------------------------------------\n");
 
-	for (int i = 1; i <= num_words; i++)
+	for (int i = num_words; i > 0; i--)
 	{
 		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
 		fprintf(fp, "; %08lx  %02x   %s\n", ep->xt, ep->flags, ep->name);
+	}
+	fprintf(fp, "\n");
+}
+
+// ------------------------------------------------------------
+void dis_prims(FILE *fp)
+{
+	fprintf(output_fp, "; Opcodes:\n; -----------------------------\n");
+	for (int i = 0; ; i++)
+	{
+		PRIM_T op = thePrims[i];
+		if (op.asm_instr == NULL)
+			break;
+		fprintf(output_fp, "; %02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
 	}
 	fprintf(fp, "\n");
 }
@@ -510,6 +524,7 @@ int main(int argc, char** argv)
 
 	read_words();
 
+	dis_prims(output_fp);
 	dis_words(output_fp);
 	do_dis(output_fp);
 	fclose(output_fp);

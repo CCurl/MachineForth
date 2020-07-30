@@ -234,6 +234,45 @@ CELL rpop()
 }
 
 // ------------------------------------------------------------
+void define_word(char *word)
+{
+	ENTRY_T *ep = (ENTRY_T *)&(the_dict[++num_words]);
+	size_t maxLen = sizeof(ep->name) - 1;
+	if (StringLen(word) > maxLen)
+		word[maxLen] = (char)0;
+
+	ep->xt = HERE;
+	ep->flags = 0;
+	StringCopy(ep->name, word);
+}
+
+ENTRY_T *find_word(const char *word)
+{
+	for (int i = num_words; i > 0; i--)
+	{
+		ENTRY_T *ep = (ENTRY_T *)&(the_dict[i]);
+		if (_stricmp(word, ep->name) == 0)
+		{
+			return ep;
+		}
+	}
+	return NULL;
+}
+
+ENTRY_T *find_word_xt(CELL XT)
+{
+	for (int i = num_words; i > 0; i--)
+	{
+		ENTRY_T *ep = (ENTRY_T *)&(the_dict[i]);
+		if (ep->xt == XT)
+		{
+			return ep;
+		}
+	}
+	return NULL;
+}
+
+// ------------------------------------------------------------
 void run_program(CELL start)
 {
 	BYTE IR;
@@ -455,7 +494,18 @@ void run_program(CELL start)
 
 		// usage: ( -- ) - MACRO: end of word
 		case SEMIC:
-			CComma(RET);
+			// Do the simple tail-call jump optimization
+			reg2 = HERE-5;
+			reg3 = 0;
+			if (BYTE_AT(reg2) == CALL)
+			{
+				reg1 = CELL_AT(reg2+1);
+				reg3 = (CELL)find_word_xt(reg1);
+			}
+			if (reg3 > 0)
+				BYTE_AT(reg2) = JMP;
+			else
+				CComma(RET);
 			STATE = 0;
 			break;
 
@@ -628,31 +678,6 @@ void run_program(CELL start)
 }
 
 // ------------------------------------------------------------
-void define_word(char *word)
-{
-	ENTRY_T *ep = (ENTRY_T *)&(the_dict[++num_words]);
-	size_t maxLen = sizeof(ep->name) - 1;
-	if (StringLen(word) > maxLen)
-		word[maxLen] = (char)0;
-
-	ep->xt = HERE;
-	ep->flags = 0;
-	StringCopy(ep->name, word);
-}
-
-ENTRY_T *find_word(const char *word)
-{
-	for (int i = num_words; i > 0; i--)
-	{
-		ENTRY_T *ep = (ENTRY_T *)&(the_dict[i]);
-		if (_stricmp(word, ep->name) == 0)
-		{
-			return ep;
-		}
-	}
-	return NULL;
-}
-
 void dump_words(FILE *fp)
 {
 	fprintf(output_fp, "\nWords:\n");
@@ -883,7 +908,8 @@ void write_info_file()
 		fprintf(output_fp, "%02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
 	}
 
-	fprintf(output_fp, "\nthe_memory: %08lx, HERE: %08lx\n", (CELL)the_memory, HERE);
+	CELL used = HERE - (CELL)the_memory;
+	fprintf(output_fp, "\nthe_memory: %08lx, HERE: %08lx, bytes: #%ld\n", (CELL)the_memory, HERE, used);
 	dump_words(output_fp);
 
 	fclose(output_fp);
