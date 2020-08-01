@@ -225,7 +225,6 @@ void do_dis(FILE *fp)
 {
 	char left[lsz], right[rsz], other[osz];
 	BYTE IR;
-	CELL reg1, reg2, reg3;
 	CELL xt;
 
 	PC = (CELL)the_memory;
