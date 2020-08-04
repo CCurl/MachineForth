@@ -6,10 +6,9 @@
 \ define some variables
 dw s $01 c, (h) @ 0 , #17 c, dw (s) $01 c, , #17 c,
 dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
-dw t $01 c, (h) @ 0 , #17 c, dw (t) $01 c, , #17 c,
 
 \ constant
-dw cell #02 c, #04 c, #17 c, inline
+#04 dw cell #02 c, c, #17 c, inline
 
 \ ok, now we can start writing the language in itself
 : here (h) @ ; inline
@@ -27,7 +26,6 @@ dw cell #02 c, #04 c, #17 c, inline
 \ Machine Forth words
 : >s (s) ! ; : c@+ s c@ s 1+ >s ; : @+ s @ s 4 + >s ;
 : >d (d) ! ; : c!+ d c! d 1+ >d ; : !+ d ! d 4 + >d ;
-: >t (t) ! ;
 
 \ core words
 : space $20 emit ; : bl $20 ; : cr #13 emit #10 emit ;
