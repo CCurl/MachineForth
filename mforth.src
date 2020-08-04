@@ -1,33 +1,33 @@
 \ boot-strap stuff ...
-\ $01 => lit, $10 ret
-\ $0C => jmp, $0d => jmpz, $0e => jmpnz
-(h) @ #5 - dw the-memory $01 c, , $10 c,
+\ #01 => lit, #02 => clit
+\ #13 => jmp, #14 => jmpz, #15 => jmpnz, #17 ret
+(h) @ #05 - dw the-memory #01 c, , #17 c,
 
-\ test defining a variable
-$01 c, (h) @ 0 , $10 c, dw (s) $1 c, , $10 c,
-$01 c, (h) @ 0 , $10 c, dw (d) $1 c, , $10 c,
-$01 c, (h) @ 0 , $10 c, dw (t) $1 c, , $10 c,
+\ define some variables
+dw s $01 c, (h) @ 0 , #17 c, dw (s) $01 c, , #17 c,
+dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
+dw t $01 c, (h) @ 0 , #17 c, dw (t) $01 c, , #17 c,
 
 \ constant
-4 dw cell $2 c, c, $10 c,
+dw cell #02 c, #04 c, #17 c, inline
 
 \ ok, now we can start writing the language in itself
 : here (h) @ ; inline
 
 \ program control
-: if   $0D c, here 0 , ; immediate
-: else $0C c, here swap 0 , here swap ! ; immediate
+: if   #14 c, here 0 , ; immediate
+: else #13 c, here swap 0 , here swap ! ; immediate
 : then here swap ! ; immediate
 
 : begin here ; immediate
-: again $0C c, , ; immediate
-: until $0D c, , ; immediate
-: while $0E c, , ; immediate
+: again #13 c, , ; immediate
+: until #14 c, , ; immediate
+: while #15 c, , ; immediate
 
 \ Machine Forth words
-: >s (s) ! ; : s (s) @ ; : c@+ s c@ s 1+ >s ; : @+ s @ s 4 + >s ;
-: >d (d) ! ; : d (d) @ ; : c!+ d c! d 1+ >d ; : !+ d ! d 4 + >d ;
-: >t (t) ! ; : t (t) @ ;
+: >s (s) ! ; : c@+ s c@ s 1+ >s ; : @+ s @ s 4 + >s ;
+: >d (d) ! ; : c!+ d c! d 1+ >d ; : !+ d ! d 4 + >d ;
+: >t (t) ! ;
 
 \ core words
 : space $20 emit ; : bl $20 ; : cr #13 emit #10 emit ;
@@ -44,9 +44,9 @@ $01 c, (h) @ 0 , $10 c, dw (t) $1 c, , $10 c,
 : .word ( addr -- ) dup >len $20 emit count type ;
 : .wordl ( addr -- ) cr dup >xt hex. dup >flags . dup >len $20 emit count type ;
 : words-each last 0 begin drop ( do something ) >next dup >xt while drop drop ;
-: words      last 0 begin drop    dup .wordl    >next dup >xt while drop drop ;
+: words      last 0 begin drop    dup .word     >next dup >xt while drop drop ;
+: wordsl     last 0 begin drop    dup .wordl    >next dup >xt while drop drop ;
 
 \ for the REPL
 : ok $20 emit 'o' emit 'k' emit cr ;
 : main words ok ;
-cls

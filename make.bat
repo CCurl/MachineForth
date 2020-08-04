@@ -47,7 +47,7 @@ set c-files=mforth.c
 set c-files=%c-files% forth-vm.c
 echo gcc -Ofast -o %output% %c-files%
 gcc -Ofast -o %output% %c-files%
-if "--%2%--" == "--1--" mforth
+if "--%2%--" == "--1--" mforth -b
 goto done
 
 :make-forth

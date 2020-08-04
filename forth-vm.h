@@ -28,7 +28,7 @@ extern CELL pop();
 extern void rpush(CELL);
 extern CELL rpop();
 extern void run_program(CELL);
-
+extern int StrLen(char *);
 extern DICT_T the_words[];
 extern int num_words;
 extern HANDLE hStdout, hStdin;

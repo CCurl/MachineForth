@@ -252,6 +252,12 @@ void run_program(CELL start)
 			case GETCH:
 				break;
 
+			case GETS:
+				reg1 = pop();
+				reg2 = (CELL)gets((char *)(reg1+1));
+				BYTE_AT(reg1) = StrLen((char *)reg1+1);
+				break;
+
 			case COMPAREI:
 				break;
 
