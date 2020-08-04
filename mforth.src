@@ -1,0 +1,52 @@
+\ boot-strap stuff ...
+\ $01 => lit, $10 ret
+\ $0C => jmp, $0d => jmpz, $0e => jmpnz
+(h) @ #5 - dw the-memory $01 c, , $10 c,
+
+\ test defining a variable
+$01 c, (h) @ 0 , $10 c, dw (s) $1 c, , $10 c,
+$01 c, (h) @ 0 , $10 c, dw (d) $1 c, , $10 c,
+$01 c, (h) @ 0 , $10 c, dw (t) $1 c, , $10 c,
+
+\ constant
+4 dw cell $2 c, c, $10 c,
+
+\ ok, now we can start writing the language in itself
+: here (h) @ ; inline
+
+\ program control
+: if   $0D c, here 0 , ; immediate
+: else $0C c, here swap 0 , here swap ! ; immediate
+: then here swap ! ; immediate
+
+: begin here ; immediate
+: again $0C c, , ; immediate
+: until $0D c, , ; immediate
+: while $0E c, , ; immediate
+
+\ Machine Forth words
+: >s (s) ! ; : s (s) @ ; : c@+ s c@ s 1+ >s ; : @+ s @ s 4 + >s ;
+: >d (d) ! ; : d (d) @ ; : c!+ d c! d 1+ >d ; : !+ d ! d 4 + >d ;
+: >t (t) ! ; : t (t) @ ;
+
+\ core words
+: space $20 emit ; : bl $20 ; : cr #13 emit #10 emit ;
+: . space (.) ;
+: hex $10 base ! ; : decimal #10 base ! ;
+: hex.     base @ hex     swap . base ! ;
+: decimal. base @ decimal swap . base ! ;
+: strlen ( a -- n ) >s 0 >r begin c@+ if drop r> 1+ >r then while drop r> ;
+: count ( a1 -- a2 n ) 1+ dup 1- c@ ;
+: type ( addr n -- ) swap >s begin c@+ emit 1- while drop ;
+
+\ navigating the dictionary
+: >xt @ ; : >flags 4 + c@ ; : >len 5 + ; : >name 6 + ; : >next #36 - ;
+: .word ( addr -- ) dup >len $20 emit count type ;
+: .wordl ( addr -- ) cr dup >xt hex. dup >flags . dup >len $20 emit count type ;
+: words-each last 0 begin drop ( do something ) >next dup >xt while drop drop ;
+: words      last 0 begin drop    dup .wordl    >next dup >xt while drop drop ;
+
+\ for the REPL
+: ok $20 emit 'o' emit 'k' emit cr ;
+: main words ok ;
+cls
