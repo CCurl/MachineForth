@@ -384,9 +384,12 @@ void write_output()
 	char fn[64];
 	FILE *fp;
 
+	CELL sz = 0, end = (CELL)&(the_memory[0]);
+	while ((end + sz) < (HERE + 256) ) sz += 4096;
+
 	if (!open_file(".bin", "wb", &fp)) return;
 
-	fwrite(the_memory, 1, MEM_SZ, fp);
+	fwrite(the_memory, 1, sz, fp);
 	fclose(fp);
 
 	if (!open_file(".txt", "wt", &fp)) return;
