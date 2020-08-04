@@ -74,11 +74,9 @@ void run_program(CELL start)
 	int call_depth = 1;
 	CELL PC = (start == 0) ? (CELL)the_memory : start ;
 
-	// printf("Running (PC=%04lx) ... ", PC);
 	while (true)
 	{
         BYTE IR = BYTE_AT(PC++);
-        // printf("(PC=%08lx, IR=%d)", PC-1, IR);
 
 		switch(IR)
 		{

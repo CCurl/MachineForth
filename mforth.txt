@@ -1,13 +1,13 @@
-Words:
+HERE: 0x0041b12a, the_memory: 0x0041aee0, bytes: 586
+
+47 Words:
 -------------------------------
-  49: 00 0041b113 2 .s
-  48: 00 0041b10c 2 ..
-  47: 00 0041b0ff 3 mil
-  46: 00 0041b0e7 5 bench
-  45: 00 0041b0e5 5 timer
-  44: 00 0041b0d7 7 elapsed
-  43: 00 0041b0cc 4 main
-  42: 00 0041b0bd 2 ok
+  47: 00 0041b112 5 bench
+  46: 00 0041b101 7 elapsed
+  45: 00 0041b0ff 5 timer
+  44: 00 0041b0f2 3 mil
+  43: 00 0041b0c4 2 .s
+  42: 00 0041b0bd 2 ..
   41: 00 0041b0a0 6 wordsl
   40: 00 0041b083 5 words
   39: 00 0041b06c 10 words-each
@@ -51,7 +51,7 @@ Words:
    1: 00 0041aee5 10 the-memory
 
 Opcodes:
-------------------------
+---------------------------
 #00 ($00): nop
 #01 ($01): LITERAL
 #02 ($02): CLITERAL

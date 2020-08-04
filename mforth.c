@@ -7,6 +7,7 @@
 
 char base_fn[32];
 bool run_saved = true;
+bool is_temp = false;
 
 #define BUF_SZ 1024
 char input_buf[BUF_SZ];
@@ -257,7 +258,12 @@ char *parse_word(char *word, char *stream)
 
 	if ((*word == ';') && (*(word+1) == 0))
 	{
-		ccomma(RET);
+		// Simple tail-call optimization
+		if ((BYTE_AT(HERE-5) == CALL) && rfind_word(CELL_AT(HERE-4)))
+			BYTE_AT(HERE-5) = JMP;
+		else
+			ccomma(RET);
+		
 		STATE = 0;
 		return stream;
 	}
@@ -392,7 +398,7 @@ void write_output()
 	FILE *fp;
 
 	CELL sz = 0, end = (CELL)&(the_memory[0]);
-	while ((end + sz) < (HERE + 256) ) sz += 4096;
+	while ((end + sz) < (HERE + 0x0200) ) sz += 0x1000;
 
 	if (!open_file(".bin", "wb", &fp)) return;
 
@@ -401,14 +407,17 @@ void write_output()
 
 	if (!open_file(".txt", "wt", &fp)) return;
 
-	fprintf(fp, "Words:\n-------------------------------\n");
+	fprintf(fp, "HERE: 0x%08lx, the_memory: 0x%08lx, bytes: %d\n", 
+		HERE, the_memory, HERE - (CELL)the_memory);
+
+	fprintf(fp, "\n%d Words:\n-------------------------------\n", num_words);
 	for (int i = num_words; i > 0; i--)
 	{
 		DICT_T *e = &the_words[i];
 		fprintf(fp, "%4d: %02x %08lx %d %s\n", i, e->flags, e->XT, e->len, e->name);
 	}
 
-	fprintf(fp, "\nOpcodes:\n------------------------\n");
+	fprintf(fp, "\nOpcodes:\n---------------------------\n");
 	for (int i = 0; ; i++)
 	{
 		OPCODE_T *op = &opcodes[i];
@@ -460,6 +469,9 @@ void parse_arg(char *arg)
 
 	// -b (bootstrap)
 	if (*arg == 'b') run_saved = false;
+
+	// -t (is-temp)
+	if (*arg == 't') is_temp = true;
 }
 
 // ---------------------------------------------------------------------
@@ -496,7 +508,8 @@ int main (int argc, char **argv)
 	REPL();
 	BYTE_AT((CELL)&the_memory[0]) = JMP;
 	CELL_AT((CELL)&the_memory[1]) = the_words[num_words].XT;
-	write_output();
+	if (!is_temp)
+		write_output();
 
     return 0;
 }

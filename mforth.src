@@ -46,5 +46,9 @@ dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
 : wordsl     last 0 begin drop    dup .wordl    >next dup >xt while drop drop ;
 
 \ for the REPL
-: ok $20 emit 'o' emit 'k' emit cr ;
-: main words ok ;
+: .. dup . ;
+: .s $20 emit '(' emit >r >r >r >r .. r> .. r> .. r> .. r> .. $20 emit ')' emit ;
+: mil 1000 1000 * * ;
+: timer gettick ;
+: elapsed swap - 1000 /mod $20 emit (.) '.' emit (.) ;
+: bench timer swap begin 1- while drop timer elapsed ;
