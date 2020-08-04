@@ -47,7 +47,7 @@ OPCODE_T opcodes[] = {
         , { AND,           "AND",           }
         , { GETCH,         "GETCH",         }
         , { COMPAREI,      "COMPAREI",      }
-        , { SLASHMOD,      "SLASHMOD",      }
+        , { SLASHMOD,      "/mod",          }
         , { NOT,           "NOT",           }
         , { RFETCH,        "RFETCH",        }
         , { INC,           "1+",            }
@@ -266,6 +266,13 @@ char *parse_word(char *word, char *stream)
 	{
 		stream = get_word(stream, word);
 		define_word(word);
+		return stream;
+	}
+
+	if (strcmpi(word, "forget") == 0)
+	{
+		HERE = the_words[num_words].XT;
+		num_words--;
 		return stream;
 	}
 
