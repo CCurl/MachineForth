@@ -8,6 +8,7 @@
 char base_fn[32];
 bool run_saved = true;
 bool is_temp = false;
+bool auto_run = false;
 
 #define BUF_SZ 1024
 char input_buf[BUF_SZ];
@@ -472,6 +473,19 @@ void parse_arg(char *arg)
 
 	// -t (is-temp)
 	if (*arg == 't') is_temp = true;
+
+	// -a (auto-run)
+	if (*arg == 'a') auto_run = true;
+
+	if (*arg == '?')
+	{
+		printf("usage: mforth [options]\n");
+		printf("\t-f:baseFn (default: 'mforth')\n");
+		printf("\t-b        (bootstrap, default: false)\n");
+		printf("\t-t        (is-temp,   default: false\n");
+		printf("\t-a        (auto-run,  default: false)\n");
+		exit(0);
+	}
 }
 
 // ---------------------------------------------------------------------
@@ -496,20 +510,27 @@ int main (int argc, char **argv)
 	if (run_saved)
 	{
 		if (!read_binaries()) return 1;
+		if (auto_run) 
+		{
+			run_program(0);
+			return 0;
+		}
 	}
 	else
 	{
-		if (!open_file(".src", "rt", &input_fp)) return 1;
-
 		ccomma(BYE);
 		comma(0);
+		if (!open_file(".src", "rt", &input_fp)) return 1;
 	}
 
 	REPL();
-	BYTE_AT((CELL)&the_memory[0]) = JMP;
-	CELL_AT((CELL)&the_memory[1]) = the_words[num_words].XT;
+
 	if (!is_temp)
+	{
+		BYTE_AT((CELL)&the_memory[0]) = JMP;
+		CELL_AT((CELL)&the_memory[1]) = the_words[num_words].XT;
 		write_output();
+	}
 
     return 0;
 }

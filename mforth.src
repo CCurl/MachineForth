@@ -57,3 +57,4 @@ dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
 : elapsed swap - 1000 /mod space (.) '.' emit .3 ;
 : bench ( n -- ) timer swap begin 1- while drop timer elapsed ;
 : benches ( n count -- ) begin over bench 1- while drop drop ;
+: main 500 mil 10 benches ;

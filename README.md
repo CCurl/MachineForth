@@ -8,37 +8,30 @@ http://www.ultratechnology.com/mfp21.htm
 It has circular stacks, for both data and return.
 It is very easy to add primitives and add any desired functionality.
 
-It is completely contained in under 1000 lines of C in one file, 'mf.c'.
+It is written in C in just a few files.
 There is also a disassembler, in file 'mfd.c'.
 
-This is a token-threaded implementation. I ran some comparisons between that and a direct-threaded 
-implementation.  I was surprised to find that the byte-code threaded implementation ran faster. It was not 
-much faster, over 500 million iterations, about .4 seconds for the following simple loop:
+This is a token-threaded implementation. I ran some comparisons between that and a direct-threaded implementation.  I was surprised to find that the byte-code threaded implementation ran faster. It was not much faster, over 500 million iterations, about .4 seconds for the following simple loop:
 
-: bench 1000 dup * 500 * begin 1- while drop ;    \ This runs in about 1.2 seconds
+: bench 1000 dup * 500 * begin 1- while drop ;    \ This runs in about 1.1 seconds
 
-This is probably because it uses a SWITCH loop, so the overhead for the call/ret insructions is avoided. 
-Over 500 million iterations, that can be noticeable.
+This is probably because it uses a SWITCH loop, so the overhead for the call/ret insructions is avoided. Over 500 million iterations, that can be noticeable.
 
-Building ...
+Building Machine Forth:
 
-Machine Forth can be built using either Visual Studio, or GCC. 
+    Machine Forth can be built using either Visual Studio, or GCC. 
 
-- For Visual Studio, there is a Solution file, mf.sln.
+    - For Visual Studio, there is a Solution file, mf.sln.
 
-- For GCC, it can be built like this: gcc -g -Ofast -o mf mf.c
-  Of course, in a Windows environment, using GCC depends on having it installed (see MinGW).
-  There is also a batch file I created, make.bat
-
-  'make mf' makes the mf.exe, maching forth
-  'make ma' creates a mf.s assembly listing file
-  'make mfd' makes the disassembler
+    - For GCC, there is a batch file, make.bat
+        'make mf' makes the mforth.exe
+        'make mfd' makes the mforth disassembler
 
 Running ...
 
-- mf: reads mf.src for its input. It then runs the built program, and writes output files:
-    - mf.bin, the binary representation of the program.
-    - mf.txt, a human-readable description of the generated program.
-    - mf.wds, a binary representation of the dictionary.
+  mforth -? shows usage information about mforth
+  mfd -? shows usage information about the mforth disassembler
 
-- mfd: reads mf.bin and mf.wds, and creates mf.dis, a disassembly of the generated program.
+  To play with base mforth system, use 'mforth -b -t'. That builds a base system and drops into the REPL. The -t tells mforth to not save the state when you exit.
+
+- mfd: reads the identified system and creates a disassembly in a *.dis file.
