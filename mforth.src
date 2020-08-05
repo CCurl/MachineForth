@@ -39,16 +39,21 @@ dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
 
 \ navigating the dictionary
 : >xt @ ; : >flags 4 + c@ ; : >len 5 + ; : >name 6 + ; : >next #36 - ;
-: .word ( addr -- ) dup >len $20 emit count type ;
-: .wordl ( addr -- ) cr dup >xt hex. dup >flags . dup >len $20 emit count type ;
+: .word ( addr -- ) dup >len space count type ;
+: .wordl ( addr -- ) cr dup >xt hex. dup >flags . dup >len space count type ;
 : words-each last 0 begin drop ( do something ) >next dup >xt while drop drop ;
 : words      last 0 begin drop    dup .word     >next dup >xt while drop drop ;
 : wordsl     last 0 begin drop    dup .wordl    >next dup >xt while drop drop ;
 
 \ for the REPL
 : .. dup . ;
-: .s $20 emit '(' emit >r >r >r >r .. r> .. r> .. r> .. r> .. $20 emit ')' emit ;
-: mil 1000 1000 * * ;
+: .s space '(' emit >r >r >r >r .. r> .. r> .. r> .. r> .. space ')' emit ;
+: pow ( n1 n2 -- n3 ) 1 >r begin over r> * >r 1- while drop drop r> ;
+: .2 dup base @       < if '0' emit then drop (.) ;
+: .3 dup base @ 2 pow < if '0' emit then drop .2 ;
+: .4 dup base @ 3 pow < if '0' emit then drop .3 ;
+: mil ( n1 -- n2 ) #1000 #1000 * * ;
 : timer gettick ;
-: elapsed swap - 1000 /mod $20 emit (.) '.' emit (.) ;
-: bench timer swap begin 1- while drop timer elapsed ;
+: elapsed swap - 1000 /mod space (.) '.' emit .3 ;
+: bench ( n -- ) timer swap begin 1- while drop timer elapsed ;
+: benches ( n count -- ) begin over bench 1- while drop drop ;
