@@ -21,6 +21,7 @@ HANDLE hStdout, hStdin;
 CONSOLE_SCREEN_BUFFER_INFO csbi;
 
 // ---------------------------------------------------------------------
+// The stacks are circular ... no underflow or overflow
 // ---------------------------------------------------------------------
 #define STK_SZ 32
 CELL dstk[STK_SZ];
@@ -34,40 +35,37 @@ CELL *RSS = &(rstk[0]);
 CELL *RSE = &(rstk[STK_SZ-1]);
 
 // ---------------------------------------------------------------------
+// Stack operations
 // ---------------------------------------------------------------------
 void push(CELL val)
 {
-	if (++DSP > DSE)
-		DSP = DSS;
+	if (++DSP > DSE) DSP = DSS;
 	TOS = val;
 }
 
 CELL pop()
 {
 	CELL ret = TOS;
-	if (--DSP < DSS)
-		DSP = DSE;
+	if (--DSP < DSS) DSP = DSE;
 	return ret;
 }
 
 // ---------------------------------------------------------------------
 void rpush(CELL val)
 {
-	if ((++RSP) > RSE)
-		RSP = RSS;
+	if ((++RSP) > RSE) RSP = RSS;
 	*RSP = val;
 }
 
 CELL rpop()
 {
 	CELL ret = *(RSP--);
-	if (RSP < RSS)
-		RSP = RSE;
+	if (RSP < RSS) RSP = RSE;
 	return ret;
 }
 
 // ---------------------------------------------------------------------
-// Where all the work is done
+// Where all the fun is ...
 // ---------------------------------------------------------------------
 void run_program(CELL start)
 {

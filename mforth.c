@@ -119,8 +119,7 @@ char *get_word(char *stream, char *word)
 	while (*stream < (char)33)
 	{
 		// NULL means end of stream
-		if (*stream == (char)0)
-			return (char *)0;
+		if (*stream == (char)0) return (char *)0;
 		++stream;
 	}
 
@@ -150,8 +149,7 @@ DICT_T *rfind_word(CELL xt)
 	for (int i = num_words; i > 0; i--)
 	{
 		DICT_T *e = (&the_words[i]);
-		if (e->XT == xt)
-			return e;
+		if (e->XT == xt) return e;
 	}
 	return NULL;
 }
@@ -162,8 +160,7 @@ DICT_T *find_word(char *name)
 	for (int i = num_words; i > 0; i--)
 	{
 		DICT_T *e = (&the_words[i]);
-		if (strcmpi(e->name, name) == 0)
-			return e;
+		if (strcmpi(e->name, name) == 0) return e;
 	}
 	return NULL;
 }
@@ -174,10 +171,8 @@ OPCODE_T *find_opcode(char *name)
 	for (int i = 0;; i++)
 	{
 		OPCODE_T *e = (&opcodes[i]);
-		if (e->forth_prim == NULL)
-			return NULL;
-		if (strcmpi(e->forth_prim, name) == 0)
-			return e;
+		if (e->forth_prim == NULL) return NULL;
+		if (strcmpi(e->forth_prim, name) == 0) return e;
 	}
 	return NULL;
 }
@@ -237,15 +232,13 @@ char *parse_word(char *word, char *stream)
 {
 	if ((*word == '\\') && (*(word+1) == 0))
 	{
-		while (*stream > (char)31)
-			++stream;
+		while (*stream > (char)31) ++stream;
 		return stream;
 	}
 
 	if ((*word == '(') && (*(word+1) == 0))
 	{
-		while (*stream != ')')
-			++stream;
+		while (*stream != ')') ++stream;
 		return ++stream;
 	}
 
@@ -348,10 +341,7 @@ void execute(char *stream)
 	while (true)
 	{
 		stream = get_word(stream, word);
-		if (stream == NULL)
-		{
-			break;
-		}
+		if (stream == NULL) break;
 		stream = parse_word(word, stream);
 	}
 
@@ -364,11 +354,11 @@ bool open_file(char *ext, char *mode, FILE **pfp)
 	char fn[64];
 	StrCpy(fn, base_fn);
 	StrCat(fn, ext);
-	*pfp = NULL;
 	FILE *fp = fopen(fn, mode);
 	if (!fp)
 	{
 		printf("\nUnable to open '%s'", fn);
+		*pfp = NULL;
 		return false;
 	}
 	*pfp = fp;
@@ -379,11 +369,11 @@ bool open_file(char *ext, char *mode, FILE **pfp)
 bool read_binaries() 
 {
 	FILE *fp = NULL;
-	if (!open_file(".bin", "rb", &fp)) return false;
+	if (!open_file(".BIN", "rb", &fp)) return false;
 	fread(the_memory, MEM_SZ, 1, fp);
 	fclose(fp);
 
-	if (!open_file(".inf", "rb", &fp)) return false;
+	if (!open_file(".INF", "rb", &fp)) return false;
 	fread(&HERE, sizeof(CELL), 1, fp);
 	fread(&num_words, sizeof(num_words), 1, fp);
 	int num = fread(the_words, sizeof(DICT_T), MAX_WORDS, fp);
@@ -395,18 +385,17 @@ bool read_binaries()
 // ---------------------------------------------------------------------
 void write_output() 
 {
-	char fn[64];
-	FILE *fp;
+	FILE *fp = NULL;
+	CELL bin_sz = 0, start = (CELL)&(the_memory[0]);
 
-	CELL sz = 0, end = (CELL)&(the_memory[0]);
-	while ((end + sz) < (HERE + 0x0200) ) sz += 0x1000;
+	while ((start + bin_sz) < (HERE + 0x0400) ) bin_sz += 0x0800;
 
-	if (!open_file(".bin", "wb", &fp)) return;
+	if (!open_file(".BIN", "wb", &fp)) return;
 
-	fwrite(the_memory, 1, sz, fp);
+	fwrite(the_memory, 1, bin_sz, fp);
 	fclose(fp);
 
-	if (!open_file(".txt", "wt", &fp)) return;
+	if (!open_file(".TXT", "wt", &fp)) return;
 
 	fprintf(fp, "HERE: 0x%08lx, the_memory: 0x%08lx, bytes: %d\n", 
 		HERE, the_memory, HERE - (CELL)the_memory);
@@ -428,7 +417,7 @@ void write_output()
 	}
 
 	fclose(fp);
-	if (!open_file(".inf", "wb", &fp)) return;
+	if (!open_file(".INF", "wb", &fp)) return;
 	fwrite(&HERE, sizeof(CELL), 1, fp);
 	fwrite(&num_words, sizeof(num_words), 1, fp);
 	fwrite(the_words, sizeof(DICT_T), num_words+4, fp);
@@ -537,7 +526,7 @@ int main (int argc, char **argv)
 	{
 		ccomma(BYE);
 		comma(0);
-		if (!open_file(".src", "rt", &input_fp)) return 1;
+		if (!open_file(".SRC", "rt", &input_fp)) return 1;
 	}
 
 	REPL();

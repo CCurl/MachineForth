@@ -30,6 +30,7 @@ Building Machine Forth:
 Running ...
 
   mforth -? shows usage information about mforth.
+  
   mfd -? shows usage information about the mforth disassembler.
 
   To play with base mforth system, use 'mforth -b -t'. That builds a base system and drops into the REPL. The -t tells mforth to not save the state when you exit.
