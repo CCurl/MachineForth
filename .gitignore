@@ -67,3 +67,6 @@ mf.txt
 /mf.dis
 mforth.bin
 mforth.inf
+empty.inf
+empty.bin
+empty.txt

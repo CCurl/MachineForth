@@ -482,8 +482,25 @@ void parse_arg(char *arg)
 		printf("usage: mforth [options]\n");
 		printf("\t-f:baseFn (default: 'mforth')\n");
 		printf("\t-b        (bootstrap, default: false)\n");
-		printf("\t-t        (is-temp,   default: false\n");
+		printf("\t-t        (is-temp,   default: false)\n");
 		printf("\t-a        (auto-run,  default: false)\n");
+		printf("\nNotes ...");
+		
+		printf("\n\n    -f:baseFn defines the base filename for the files in the working set.");
+		printf("\nThis is used by the other options.");
+
+		printf("\n\n    -b tells mforth to start with an empty dictionary. Then mforth");
+		printf("\nreads the <baseFn>.SRC file as initial input. You can define an empty");
+		printf("\n<baseFn>.SRC file to drop into the REPL with no words at all. I have");
+		printf("\nprovided the empty.SRC file for that purpose. Use 'mforth -f:empty -b'");
+
+		printf("\n\n    -t tells mforth that it should not save its state when closing. By");
+		printf("\ndefault, on exit (bye), mforth will create a set of files <baseFn>.[TXT|INF|BIN]");
+		printf("\nthat allow mforth to remember the current dictionary the next time it is run.");
+
+		printf("\n\n    -a tells mforth to automatically run the last word in the working set");
+		printf("\ndictionary and then exit. In this case, -t is automatically set to true. One would");
+		printf("\nuse this option to run a stand-alone program.");
 		exit(0);
 	}
 }

@@ -3,14 +3,15 @@
 \ #13 => jmp, #14 => jmpz, #15 => jmpnz, #17 ret
 (h) @ #05 - dw the-memory #01 c, , #17 c,
 
+\ constant
+#04 dw cell #02 c, c, #17 c, inline
+
 \ define some variables
 dw s $01 c, (h) @ 0 , #17 c, dw (s) $01 c, , #17 c,
 dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
 
-\ constant
-#04 dw cell #02 c, c, #17 c, inline
-
 \ ok, now we can start writing the language in itself
+: >s (s) ! ; : >d (d) ! ;
 : here (h) @ ; inline
 
 \ program control
@@ -24,8 +25,8 @@ dw d $01 c, (h) @ 0 , #17 c, dw (d) $01 c, , #17 c,
 : while #15 c, , ; immediate
 
 \ Machine Forth words
-: >s (s) ! ; : c@+ s c@ s 1+ >s ; : @+ s @ s 4 + >s ;
-: >d (d) ! ; : c!+ d c! d 1+ >d ; : !+ d ! d 4 + >d ;
+: @+ s @ s 4 + >s ; : c@+ s c@ s 1+ >s ;
+: !+ d ! d 4 + >d ; : c!+ d c! d 1+ >d ;
 
 \ core words
 : space $20 emit ; : bl $20 ; : cr #13 emit #10 emit ;
