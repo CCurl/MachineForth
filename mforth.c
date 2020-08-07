@@ -349,6 +349,7 @@ void execute(char *stream)
 	SETAT(1, the_words[num_words].XT);
 }
 
+// ---------------------------------------------------------------------
 bool open_file(char *ext, char *mode, FILE **pfp)
 {
 	char fn[64];
@@ -386,12 +387,11 @@ bool read_binaries()
 void write_output() 
 {
 	FILE *fp = NULL;
-	CELL bin_sz = 0, start = (CELL)&(the_memory[0]);
+	CELL bin_sz = 0, start = (CELL)(&the_memory[0]);
 
 	while ((start + bin_sz) < (HERE + 0x0400) ) bin_sz += 0x0800;
 
 	if (!open_file(".BIN", "wb", &fp)) return;
-
 	fwrite(the_memory, 1, bin_sz, fp);
 	fclose(fp);
 
@@ -526,6 +526,10 @@ int main (int argc, char **argv)
 	{
 		ccomma(BYE);
 		comma(0);
+		define_word("the-memory");
+		ccomma(LITERAL);
+		comma((CELL)&the_memory[0]);
+		ccomma(RET);
 		if (!open_file(".SRC", "rt", &input_fp)) return 1;
 	}
 

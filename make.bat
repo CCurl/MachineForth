@@ -1,7 +1,7 @@
 @echo off
 
 if "--%1%--" == "--mf--" goto make-mf
-if "--%1%--" == "--fd--" goto make-mfd
+if "--%1%--" == "--mfd--" goto make-mfd
 goto unknown
 
 :make-mf

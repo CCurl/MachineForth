@@ -10,164 +10,46 @@
 #include <windows.h> 
 #include <stdio.h>
 #include <string.h>
+#include "Shared.h"
 
 typedef unsigned long CELL;
 typedef unsigned char BYTE;
 
 // ------------------------------------------------------------
-// Things that would change from usage to usage
-#define MEM_SZ_K 1
-#define MF_SRC "mf.src"
-#define MF_BIN "mf.bin"
-#define MF_INF "mf.txt"
-#define MF_DIS "mf.dis"
-#define MF_WDS "mf.wds"
-#define DSZ 64		// data stack size (circular)
-#define RSZ 64		// return stack size (circular)
-#define MAX_WORDS 2048
-// ------------------------------------------------------------
+BYTE the_memory[MEM_SZ];
+DICT_T the_words[MAX_WORDS];
 
+char base_fn[64];
 HANDLE hStdout, hStdin;
 CONSOLE_SCREEN_BUFFER_INFO csbi;
+int num_words = 0;
 
-FILE* input_fp = NULL;
-FILE* output_fp = NULL;
+FILE *input_fp = NULL;
+FILE *output_fp = NULL;
 
-CELL MEM_SZ = (1024 * MEM_SZ_K);
 CELL HERE, STATE = 0;
 CELL BASE = 10;
 CELL STOP_HERE = 0;
-#define CELL_SZ 4
 
-// ------------------------------------------------------------
-CELL PC;
-CELL* DSP;
-
-#define IS_IMMEDIATE  0x01
-#define IS_INLINE     0x02
-
-typedef struct {
-	CELL xt;
-	BYTE flags;
-	char name[30];
-} ENTRY_T;
-
-typedef struct {
-	const char *asm_instr;
-	const BYTE opcode;
-	const BYTE flags;
-} PRIM_T;
-
-BYTE* the_memory = NULL;
-ENTRY_T* the_dict = NULL;
-int num_words = 0;
-
-#define BYTE_AT(src) (*(BYTE *)(src))
-#define CELL_AT(src) (*(CELL *)(src))
-
-// ------------------------------------------------------------
-// To add functionality:
-// 1. Add an entry to the enum below
-// 2. Add an entry to the array of PRIM_T records later in the file.
-// 3. Add a case to the switch in run_program()
-// ------------------------------------------------------------
-
-enum prims {
-	NOP = 0, SETA, A, SETS, SRC, SETD, DST,
-	FETCH, FETCH1, CFETCH, CFETCH1,
-	STORE, STORE1, CSTORE, CSTORE1,
-	CLIT, LIT, DUP, DROP, SWAP, OVER, COMMA, CCOMMA,
-	EMIT, GOTORC, CLS, INC, DEC, HA, BA,
-	CCALL, CRET, CALL, RET, SEMIC, JMP, JMPZ, JNZ,
-	IF, ELSE, THEN, BEGIN, AGAIN, UNTIL, WHILE,
-	ADD, SUB, MULT, DIV, TIMES2, DIVIDE2, PLUS_STAR,
-	DTOR, RTOD, AND, XOR, DOT,
-	BYE,
-} OPCODES;
-
-// ------------------------------------------------------------
-PRIM_T thePrims[] = {
-		  { "nop",     NOP,         0 }
-		, { ">a",      SETA,        0 }
-		, { "a",       A,           0 }
-		, { ">src",    SETS,        0 }
-		, { "src",     SRC,         0 }
-		, { ">dst",    SETD,        0 }
-		, { "dst",     DST,         0 }
-		, { "@@",      FETCH,       0 }
-		, { "@@+",     FETCH1,      0 }
-		, { "c@@",     CFETCH,      0 }
-		, { "c@@+",    CFETCH1,     0 }
-		, { "!!",      STORE,       0 }
-		, { "!!+",     STORE1,      0 }
-		, { "c!!",     CSTORE,      0 }
-		, { "c!!+",    CSTORE1,     0 }
-		, { "#",       CLIT,        IS_IMMEDIATE }
-		, { "lit",     LIT,         0 }
-		, { "dup",     DUP,         0 }
-		, { "drop",    DROP,        0 }
-		, { "over",    OVER,        0 }
-		, { ",",       COMMA,       0 }
-		, { "c,",      CCOMMA,      0 }
-		, { "emit",    EMIT,        0 }
-		, { "gotoRC",  GOTORC,      0 }
-		, { "cls",     CLS,         0 }
-		, { "1+",      INC,         0 }
-		, { "1-",      DEC,         0 }
-		, { "(h)",     HA,          0 }
-		, { "base",    BA,          0 }
-		, { "call",    CCALL,       IS_IMMEDIATE }
-		, { "ret",     CRET,        IS_IMMEDIATE }
-		, { "do-call", CALL,        0 }
-		, { "do-ret",  RET,         0 }
-		, { ";",       SEMIC,       IS_IMMEDIATE }
-		, { "jmp",     JMP,         0 }
-		, { "jmpz",    JMPZ,        0 }
-		, { "jnz",     JNZ,         0 }
-		, { "if",      IF,          IS_IMMEDIATE }
-		, { "else",    ELSE,        IS_IMMEDIATE }
-		, { "then",    THEN,        IS_IMMEDIATE }
-		, { "begin",   BEGIN,       IS_IMMEDIATE }
-		, { "again",   AGAIN,       IS_IMMEDIATE }
-		, { "until",   UNTIL,       IS_IMMEDIATE }
-		, { "while",   WHILE,       IS_IMMEDIATE }
-		, { "+",       ADD,         0 }
-		, { "-",       SUB,         0 }
-		, { "*",       MULT,        0 }
-		, { "/",       DIV,         0 }
-		, { "2*",      TIMES2,      0 }
-		, { "2/",      DIVIDE2,     0 }
-		, { "+*",      PLUS_STAR,   0 }
-		, { ">r",      DTOR,        0 }
-		, { "r>",      RTOD,        0 }
-		, { "and",     AND,         0 }
-		, { "xor",     XOR,         0 }
-		, { "(.)",     DOT,         0 }
-		, { "bye",     BYE,         0 }
-		, { NULL,      0,           0 }
-};
-
-
-void StringCat(char *dst, const char *src)
+// ---------------------------------------------------------------------
+void StrCpy(char *dst, char *src) 
 {
-	// goto the end of the dst string
+	while (*src)
+	{
+		*(dst++) = *(src++);
+	}
+	*dst = (char)0;
+}
+
+// ---------------------------------------------------------------------
+void StrCat(char *dst, char *src) 
+{
 	while (*dst)
 		dst++;
-
-	// copy the src string there
-	while (*src)
-		*(dst++) = *(src++);
-
-	*dst = (char)0;
+	StrCpy(dst, src);
 }
 
-void StringCopy(char *dst, const char *src)
-{
-	*dst = (char)0;
-	StringCat(dst, src);
-}
-
-size_t StringLen(char *cp)
+size_t StrLen(char *cp)
 {
 	int i = 0;
 	while (*(cp++))
@@ -183,16 +65,83 @@ void fopen_s(FILE** pfp, const char *nm, const char *mode)
 }
 #endif
 
+OPCODE_T opcodes[] = {
+          { NOP,           "nop",           }
+        , { LITERAL,       "LITERAL",       }
+        , { CLITERAL,      "CLITERAL",      }
+        , { FETCH,         "@",             }
+        , { STORE,         "!",             }
+        , { CFETCH,        "c@",            }
+        , { CSTORE,        "c!",            }
+        , { SWAP,          "SWAP",          }
+        , { DROP,          "DROP",          }
+        , { DUP,           "DUP",           }
+        , { SLITERAL,      "SLITERAL",      }
+        , { EMIT,          "emit",          }
+        , { JMP,           "JMP",           }
+        , { JMPZ,          "JMPZ",          }
+        , { JMPNZ,         "JMPNZ",         }
+        , { CALL,          "CALL",          }
+        , { RET,           "RET",           }
+        , { OR,            "OR",            }
+        , { XOR,           "XOR",           }
+        , { COM,           "COM",           }
+        , { ADD,           "+",             }
+        , { SUB,           "-",             }
+        , { MUL,           "*",             }
+        , { DIV,           "/",             }
+        , { LT,            "<",             }
+        , { EQ,            "=",             }
+        , { GT,            ">",             }
+        , { OVER,          "over",          }
+        , { COMPARE,       "COMPARE",       }
+        , { DTOR,          ">r",            }
+        , { RTOD,          "r>",            }
+        , { AND,           "AND",           }
+        , { GETCH,         "GETCH",         }
+        , { COMPAREI,      "COMPAREI",      }
+        , { SLASHMOD,      "/mod",          }
+        , { NOT,           "NOT",           }
+        , { RFETCH,        "RFETCH",        }
+        , { INC,           "1+",            }
+        , { DEC,           "1-",            }
+        , { GETTICK,       "GETTICK",       }
+        , { SHIFTLEFT,     "2*",            }
+        , { SHIFTRIGHT,    "2/",            }
+        , { PLUSSTORE,     "+!",            }
+        , { OPENBLOCK,     "open-block",    }
+        , { CLOSEBLOCK,    "close-block",   }
+        , { DOT,           "(.)",           }
+        , { HA,            "(h)",           }
+        , { BA,            "base",          }
+        , { SA,            "state",         }
+        , { LA,            "last",          }
+        , { COMMA,         ",",             }
+        , { CCOMMA,        "c,",            }
+        , { IMMEDIATE,     "immediate",     }
+        , { INLINE,        "inline",        }
+        , { TOSRC,         ">src",          }
+        , { SRC,           "src",           }
+        , { TODST,         ">dst",          }
+        , { DST,           "dst",           }
+        , { GOTORC,        "gotorc",        }
+        , { CLS,           "cls",           }
+        , { GETS,          "gets",          }
+        , { BYE,           "BYE",           }
+		, { 0,             0,               }
+};
+
+
 // ------------------------------------------------------------
 // ------------------------------------------------------------
 // ------------------------------------------------------------
 
-PRIM_T *rfind_opcode(BYTE IR)
+OPCODE_T *rfind_opcode(BYTE IR)
 {
 	for (int i = 0; ; i++)
 	{
-		PRIM_T *op = &thePrims[i];
-		if (op->asm_instr == NULL)
+		OPCODE_T *op = &opcodes[i];
+		if (op->forth_prim == NULL)
 		{
 			return NULL;
 		}
@@ -203,15 +152,13 @@ PRIM_T *rfind_opcode(BYTE IR)
 	}
 }
 
-ENTRY_T *rfind_word(CELL XT)
+// ---------------------------------------------------------------------
+DICT_T *rfind_word(CELL xt)
 {
 	for (int i = num_words; i > 0; i--)
 	{
-		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
-		if (ep->xt == XT)
-		{
-			return ep;
-		}
+		DICT_T *e = (&the_words[i]);
+		if (e->XT == xt) return e;
 	}
 	return NULL;
 }
@@ -225,51 +172,45 @@ void do_dis(FILE *fp)
 {
 	char left[lsz], right[rsz], other[osz];
 	BYTE IR;
-	CELL xt;
+	CELL PC, xt, mem_start;
 
-	PC = (CELL)the_memory;
-	xt = CELL_AT(&the_memory[6]);
-	long offset = PC - (long)xt;
+	PC = 0;
+	mem_start = GETAT(6);
+	STOP_HERE = (HERE - mem_start - 1);
 	// int call_depth = 1;
 
 	while (1)
 	{
-		if (PC >= STOP_HERE)
+		if (PC > STOP_HERE)
 			return;
 
-		IR = BYTE_AT(PC);
-		xt = CELL_AT(PC);
+		IR = GETAT(PC);
+		xt = GETAT(PC);
  
-		PRIM_T *op = rfind_opcode(IR);
-		ENTRY_T *ep = rfind_word(xt);
+		OPCODE_T *op = rfind_opcode(IR);
+		DICT_T *ep = rfind_word(xt);
 
 		right[0] = (char)0;
-		snprintf(left, lsz, "%08lx: %02x", PC-offset, IR);
+		snprintf(left, lsz, "%08lx: %02x", PC+mem_start, IR);
 		++PC;
 
 		if (op)
 		{
-			snprintf(right, rsz, "%s", op->asm_instr);
+			snprintf(right, rsz, "%s", op->forth_prim);
 		}
 
 		// printf("-PC=%08lx,%02x-", PC, BYTE_AT(PC));
 		switch (IR)
 		{
 			case NOP:
-			case SETA:
-			case A:
-			case SETS:
+			case TOSRC:
 			case SRC:
-			case SETD:
+			case TODST:
 			case DST:
 			case FETCH:
 			case STORE:
-			case FETCH1:
-			case STORE1:
 			case CFETCH:
 			case CSTORE:
-			case CFETCH1:
-			case CSTORE1:
 			case DUP:
 			case DROP:
 			case SWAP:
@@ -283,123 +224,98 @@ void do_dis(FILE *fp)
 			case DEC:
 			case HA:
 			case BA:
-			case CCALL:
-			case CRET:
+			case LA:
+			case LT:
+			case EQ:
+			case GT:
 			case RET:
-			case SEMIC:
-			case IF:
-			case ELSE:
-			case THEN:
-			case BEGIN:
-			case AGAIN:
-			case UNTIL:
-			case WHILE:
 			case ADD:
 			case SUB:
-			case MULT:
+			case MUL:
 			case DIV:
-			case PLUS_STAR:
+			case PLUSSTORE:
 			case DTOR:
 			case RTOD:
 			case AND:
 			case XOR:
+			case COM:
 			case DOT:
-			case TIMES2:
-			case DIVIDE2:
+			case SLASHMOD:
+			case SHIFTLEFT:
+			case SHIFTRIGHT:
+			case GETTICK:
 			case BYE:
 				break;
 
 
-			case CLIT:
-				snprintf(other, osz, " %08lx", CELL_AT(PC));
-				StringCat(left, other);
-				StringCat(right, other);
-				PC += CELL_SZ;
+			case CLITERAL:
+				snprintf(other, osz, " %08lx", GETBYTEAT(PC));
+				StrCat(left, other);
+				StrCat(right, other);
+				PC += 1;
 				break;
 
 			// usage: ( -- n ) - push n onto the stack
-			case LIT:
-				snprintf(other, osz, " %08lx", CELL_AT(PC));
-				StringCat(left, other);
-				StringCat(right, other);
+			case LITERAL:
+				snprintf(other, osz, " %08lx", GETAT(PC));
+				StrCat(left, other);
+				StrCat(right, other);
 				PC += CELL_SZ;
 				break;
 
 			case CALL:
-				xt = CELL_AT(PC);
+				xt = GETAT(PC);
 				snprintf(other, osz, " %08lx", xt);
-				StringCat(left, other);
-				StringCat(right, other);
+				StrCat(left, other);
+				StrCat(right, other);
 				ep = rfind_word(xt);
 				if (ep)
 				{
 					snprintf(other, osz, " (%s)", ep->name);
-					StringCat(right, other);
+					StrCat(right, other);
 				}
 				PC += CELL_SZ;
 				break;
 
 			// usage: ( -- ) - return from subroutine
 			case JMP:
-				xt = CELL_AT(PC);
+				xt = GETAT(PC);
 				snprintf(other, osz, " %08lx", xt);
-				StringCat(left, other);
-				StringCat(right, other);
+				StrCat(left, other);
+				StrCat(right, other);
 				ep = rfind_word(xt);
 				if (ep)
 				{
 					snprintf(other, osz, " (%s)", ep->name);
-					StringCat(right, other);
+					StrCat(right, other);
 				}
 				PC += CELL_SZ;
 				break;
 
 			// usage: ( n -- n ) - if TOS=0, jump
 			case JMPZ:
-				snprintf(other, osz, " %08lx", CELL_AT(PC));
-				StringCat(left, other);
-				StringCat(right, other);
+				snprintf(other, osz, " %08lx", GETAT(PC));
+				StrCat(left, other);
+				StrCat(right, other);
 				PC += CELL_SZ;
 				break;
 
 			// usage: ( n -- n ) - if TOS!=0, jump
-			case JNZ:
-				snprintf(other, osz, " %08lx", CELL_AT(PC));
-				StringCat(left, other);
-				StringCat(right, other);
+			case JMPNZ:
+				snprintf(other, osz, " %08lx", GETAT(PC));
+				StrCat(left, other);
+				StrCat(right, other);
 				PC += CELL_SZ;
 				break;
 
 			default:
-				printf("Unknown IR (%02x) at PC=%08lx.", IR, PC - 1);
+				printf("Unknown IR (%d) at PC=%08lx.", IR, PC - 1);
 				return;
 		}
 
 		// printf("%-24s ; %s\n", left, right);
 		fprintf(fp, "%-24s ; %s\n", left, right);
 	}
-}
-
-// ------------------------------------------------------------
-void read_words()
-{
-	CELL dict_sz = MAX_WORDS * sizeof(ENTRY_T);
-	the_dict = (ENTRY_T*)malloc(dict_sz);
-	memset(the_dict, 0, dict_sz);
-	num_words = 0;
-
-	fopen_s(&input_fp, MF_WDS, "rb");
-	if (! input_fp)
-	{
-		return;
-	}
-	fseek(input_fp, 0, SEEK_END);
-	long file_sz = ftell(input_fp);
-	fseek(input_fp, 0, SEEK_SET);
-	fread(the_dict, sizeof(ENTRY_T), file_sz, input_fp);
-	fclose(input_fp);
-	input_fp = NULL;
-	num_words = (file_sz / sizeof(ENTRY_T))-1;
 }
 
 // ------------------------------------------------------------
@@ -411,8 +327,8 @@ void dis_words(FILE *fp)
 
 	for (int i = num_words; i > 0; i--)
 	{
-		ENTRY_T* ep = (ENTRY_T*)&(the_dict[i]);
-		fprintf(fp, "; %08lx  %02x   %s\n", ep->xt, ep->flags, ep->name);
+		DICT_T* ep = (DICT_T*)&(the_words[i]);
+		fprintf(fp, "; %08lx  %02x   %s\n", ep->XT, ep->flags, ep->name);
 	}
 	fprintf(fp, "\n");
 }
@@ -423,12 +339,58 @@ void dis_prims(FILE *fp)
 	fprintf(output_fp, "; Opcodes:\n; -----------------------------\n");
 	for (int i = 0; ; i++)
 	{
-		PRIM_T op = thePrims[i];
-		if (op.asm_instr == NULL)
+		OPCODE_T op = opcodes[i];
+		if (op.forth_prim == NULL)
 			break;
-		fprintf(output_fp, "; %02x, (%02d), %s\n", op.opcode, op.opcode, op.asm_instr);
+		fprintf(output_fp, "; %02x, (%02d), %s\n", op.opcode, op.opcode, op.forth_prim);
 	}
 	fprintf(fp, "\n");
+}
+
+// ---------------------------------------------------------------------
+bool open_file(char *ext, char *mode, FILE **pfp)
+{
+	char fn[64];
+	StrCpy(fn, base_fn);
+	StrCat(fn, ext);
+	FILE *fp = fopen(fn, mode);
+	if (!fp)
+	{
+		printf("\nUnable to open '%s'", fn);
+		*pfp = NULL;
+		return false;
+	}
+	*pfp = fp;
+	return true;
+}
+
+// ---------------------------------------------------------------------
+bool read_binaries() 
+{
+	FILE *fp = NULL;
+	if (!open_file(".BIN", "rb", &fp)) return false;
+	fread(the_memory, MEM_SZ, 1, fp);
+	fclose(fp);
+
+	if (!open_file(".INF", "rb", &fp)) return false;
+	fread(&HERE, sizeof(CELL), 1, fp);
+	fread(&num_words, sizeof(num_words), 1, fp);
+	int num = fread(the_words, sizeof(DICT_T), MAX_WORDS, fp);
+	fclose(fp);
+
+	return true;
+}
+
+// ---------------------------------------------------------------------
+void parse_arg(char *arg) 
+{
+	// -f:baseFn
+	if (*arg == 'f') StrCpy(base_fn, arg+2);
+	if (*arg == '?')
+	{
+		printf("usage: mfd [options]\n");
+		printf("\t-f:baseFn (default: 'mforth')\n");
+	}
 }
 
 // ------------------------------------------------------------
@@ -437,31 +399,19 @@ int main(int argc, char** argv)
 	hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	fopen_s(&input_fp,  MF_BIN, "rb");
-	if (!input_fp)
-	{
-		printf("Cannot open input file.");
-		return 1;
-	}
-	fseek(input_fp, 0, SEEK_END);
-	long file_sz = ftell(input_fp);
+	StrCpy(base_fn, "mforth");
 
-	the_memory = (BYTE*)malloc(file_sz);
-	fseek(input_fp, 0, SEEK_SET);
-	fread(the_memory, 1, file_sz, input_fp);
-	fclose(input_fp);
+    for (int i = 1; i < argc; i++)
+    {
+        char *cp = argv[i];
+        if (*cp == '-') parse_arg(++cp);
+    }
 
-	STOP_HERE = (CELL)the_memory + file_sz;
+	read_binaries();
 
-	fopen_s(&output_fp, MF_DIS, "wt");
-	if (!output_fp)
-	{
-		printf("Cannot open output file.");
-		return 1;
-	}
+	STOP_HERE = HERE;
 
-	read_words();
-
+	if (!open_file(".DIS", "wt", &output_fp)) return 0;
 	dis_prims(output_fp);
 	dis_words(output_fp);
 	do_dis(output_fp);

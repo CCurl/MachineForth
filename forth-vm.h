@@ -5,10 +5,6 @@
 extern CELL *RSP; // the return stack pointer
 extern CELL *DSP; // the data stack pointer
 
-#define TOS (*DSP)
-#define CELL_AT(addr) *(CELL *)(addr)
-#define BYTE_AT(addr) *(BYTE *)(addr)
-
 extern CELL PC;		// The "program counter"
 extern BYTE IR;		// The "instruction register"
 

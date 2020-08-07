@@ -58,7 +58,13 @@ typedef struct {
 #define NULL (0)
 #define CELL_SZ (sizeof(CELL))
 
+#define TOS (*DSP)
+
+#define CELL_AT(addr) *(CELL *)(addr)
+#define BYTE_AT(addr) *(BYTE *)(addr)
+
 #define GETAT(loc) *(CELL *)(&the_memory[loc])
+#define GETBYTEAT(loc) *(BYTE *)(&the_memory[loc])
 #define SETAT(loc, val) *(CELL *)(&the_memory[loc]) = val
 
 #define comma(val)  (*(CELL *)HERE = (CELL)val); HERE += 4
