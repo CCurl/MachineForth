@@ -13,6 +13,8 @@ bool auto_run = false;
 #define BUF_SZ 1024
 char input_buf[BUF_SZ];
 FILE *input_fp = NULL;
+FILE *input_stack[16];
+int input_SP = 0;
 
 OPCODE_T opcodes[] = {
           { NOP,           "nop",           }
@@ -272,15 +274,14 @@ char *parse_word(char *word, char *stream)
 	}
 
 	if (strcmpi(word, "load") == 0) {
-		if (input_fp) {
-			fclose(input_fp);
-			input_fp = NULL;
-		}
 		char fn[24];
 		sprintf(fn, "block-%05d.fs", pop());
-		input_fp = fopen(fn, "rt");
-		if (!input_fp) {
+		FILE *fp = fopen(fn, "rt");
+		if (!fp) {
 			printf("File '%s' not found", fn);
+		} else {
+			input_stack[input_SP++] = input_fp;
+			input_fp = fp;
 		}
 		return stream;
 	}
@@ -463,6 +464,9 @@ bool read()
 		if (fgets(input_buf, BUF_SZ, input_fp) == input_buf)  return false;
 		fclose(input_fp);
 		input_fp = NULL;
+		if (input_SP > 0) {
+			input_fp = input_stack[--input_SP];
+		}
 		StrCpy(input_buf, "");
 		return true;
 	}
