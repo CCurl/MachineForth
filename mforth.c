@@ -25,13 +25,16 @@ OPCODE_T opcodes[] = {
         , { SWAP,          "SWAP",          }
         , { DROP,          "DROP",          }
         , { DUP,           "DUP",           }
-        , { OVER,          "over",          }
-        , { EMIT,          "emit",          }
+        , { LT,            "<",             }
+        , { EQ,            "=",             }
+        , { GT,            ">",             }
         , { JMP,           "JMP",           }
         , { JMPZ,          "JMPZ",          }
         , { JMPNZ,         "JMPNZ",         }
         , { CALL,          "CALL",          }
         , { RET,           "RET",           }
+        , { OVER,          "over",          }
+        , { AND,           "AND",           }
         , { OR,            "OR",            }
         , { XOR,           "XOR",           }
         , { COM,           "COM",           }
@@ -39,13 +42,12 @@ OPCODE_T opcodes[] = {
         , { SUB,           "-",             }
         , { MUL,           "*",             }
         , { DIV,           "/",             }
-        , { LT,            "<",             }
-        , { EQ,            "=",             }
-        , { GT,            ">",             }
         , { DTOR,          ">r",            }
         , { RTOD,          "r>",            }
-        , { AND,           "AND",           }
-        , { GETCH,         "GETCH",         }
+        , { HA,            "(h)",           }
+        , { BA,            "base",          }
+        , { SA,            "state",         }
+        , { LA,            "last",          }
         , { SLASHMOD,      "/mod",          }
         , { NOT,           "NOT",           }
         , { RFETCH,        "RFETCH",        }
@@ -55,11 +57,6 @@ OPCODE_T opcodes[] = {
         , { SHIFTLEFT,     "2*",            }
         , { SHIFTRIGHT,    "2/",            }
         , { PLUSSTORE,     "+!",            }
-        , { DOT,           "(.)",           }
-        , { HA,            "(h)",           }
-        , { BA,            "base",          }
-        , { SA,            "state",         }
-        , { LA,            "last",          }
         , { COMMA,         ",",             }
         , { CCOMMA,        "c,",            }
         , { IMMEDIATE,     "immediate",     }
@@ -68,9 +65,12 @@ OPCODE_T opcodes[] = {
         , { SRC,           "src",           }
         , { TODST,         ">dst",          }
         , { DST,           "dst",           }
+        , { EMIT,          "emit",          }
         , { GOTORC,        "gotorc",        }
         , { CLS,           "cls",           }
         , { GETS,          "gets",          }
+        , { GETCH,         "GETCH",         }
+        , { DOT,           "(.)",           }
         , { BYE,           "BYE",           }
 		, { 0,             0,               }
 };
@@ -470,23 +470,27 @@ bool read()
 	return false;
 }
 
+void doHist(char *line) {
+	FILE *fp = NULL;
+	open_file(".log", "at", &fp);
+	fprintf(fp, "%s\n", line);
+	fclose(fp);
+}
+
 // ---------------------------------------------------------------------
 void REPL()
 {
-	FILE *fp = NULL;
-	open_file(".log", "at", &fp);
-	fprintf(fp, " --- new session ---\n");
+	doHist(" --- new session ---");
 	while (true)
 	{
 		if (!input_fp) printf(" ok\n");
 		read();
 		if (input_buf[0] && (!input_fp)) {
-			fprintf(fp, "%s\n", input_buf);
+			doHist(input_buf);
 		}
 		if (strcmpi(input_buf, "bye") == 0) { break; }
 		execute(input_buf);
 	}
-	fclose(fp);
 }
 
 // ---------------------------------------------------------------------
