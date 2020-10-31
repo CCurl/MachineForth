@@ -13,7 +13,7 @@ There is also a disassembler, in file 'mfd.c'.
 
 This is a token-threaded implementation. I ran some comparisons between that and a direct-threaded implementation.  I was surprised to find that the byte-code threaded implementation ran faster. It was not much faster, over 500 million iterations, about .4 seconds for the following simple loop:
 
-: bench 1000 dup * 500 * begin 1- while drop ;    \ This runs in about 1.1 seconds
+: bench 1000 dup * 500 * begin 1- while drop ;    \ This runs in about 1.4 seconds
 
 This is probably because it uses a SWITCH loop, so the overhead for the call/ret insructions is avoided. Over 500 million iterations, that can be noticeable.
 

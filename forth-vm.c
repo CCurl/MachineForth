@@ -14,7 +14,7 @@ DICT_T the_words[MAX_WORDS];
 
 CELL BASE = 10, STATE = 0;
 CELL HERE, LAST;
-CELL reg1, reg2, src, dst;
+CELL eax, ebx, src, dst;
 int num_words = 0;
 
 HANDLE hStdout, hStdin;
@@ -65,6 +65,18 @@ CELL rpop()
 }
 
 // ---------------------------------------------------------------------
+// Initialization
+// ---------------------------------------------------------------------
+void init_vm()
+{
+	HERE = 0;
+	LAST = 0;
+	for (int i = 0; i < STK_SZ; i++) {
+		dstk[i] = 0;
+	}
+}
+
+// ---------------------------------------------------------------------
 // Where all the fun is ...
 // ---------------------------------------------------------------------
 void run_program(CELL start)
@@ -82,15 +94,15 @@ void run_program(CELL start)
 				break;
 
 			case LITERAL:
-				reg1 = CELL_AT(PC);
+				eax = CELL_AT(PC);
 				PC += CELL_SZ;
-				push(reg1);
+				push(eax);
 				break;
 
 			case CLITERAL:
-				reg1 = BYTE_AT(PC);
+				eax = BYTE_AT(PC);
 				PC += 1;
-				push(reg1);
+				push(eax);
 				break;
 
 			case FETCH:
@@ -98,27 +110,24 @@ void run_program(CELL start)
 				break;
 
 			case STORE:
-				reg1 = pop();
-				CELL_AT(reg1) = pop();
+				eax = pop();
+				CELL_AT(eax) = pop();
 				break;
 
 			case SWAP:
-				reg1 = pop();
-				reg2 = pop();
-				push(reg1);
-				push(reg2);
+				eax = pop();
+				ebx = pop();
+				push(eax);
+				push(ebx);
 				break;
 
 			case DROP:
-				reg1 = pop();
+				eax = pop();
 				break;
 
 			case DUP:
-				reg1 = TOS;
-				push(reg1);
-				break;
-
-			case SLITERAL:
+				eax = TOS;
+				push(eax);
 				break;
 
 			case JMP:
@@ -152,18 +161,18 @@ void run_program(CELL start)
 				break;
 
 			case OR:
-				reg1 = pop();
-				TOS = TOS | reg1;
+				eax = pop();
+				TOS = TOS | eax;
 				break;
 
 			case AND:
-				reg1 = pop();
-				TOS = TOS & reg1;
+				eax = pop();
+				TOS = TOS & eax;
 				break;
 
 			case XOR:
-				reg1 = pop();
-				TOS = TOS ^ reg1;
+				eax = pop();
+				TOS = TOS ^ eax;
 				break;
 
 			case COM:
@@ -183,44 +192,44 @@ void run_program(CELL start)
 				break;
 
 			case CSTORE:
-				reg1 = pop();
-				reg2 = pop();
-				BYTE_AT(reg1) = (BYTE)reg2;
+				eax = pop();
+				ebx = pop();
+				BYTE_AT(eax) = (BYTE)ebx;
 				break;
 
 			case ADD:
-				reg1 = pop();
-				TOS = TOS + reg1;
+				eax = pop();
+				TOS = TOS + eax;
 				break;
 
 			case SUB:
-				reg1 = pop();
-				TOS = TOS - reg1;
+				eax = pop();
+				TOS = TOS - eax;
 				break;
 
 			case MUL:
-				reg1 = pop();
-				TOS = TOS * reg1;
+				eax = pop();
+				TOS = TOS * eax;
 				break;
 
 			case DIV:
-				reg1 = pop();
-				TOS = TOS / reg1;
+				eax = pop();
+				TOS = TOS / eax;
 				break;
 
 			case LT:
-				reg1 = pop();
-				TOS = (TOS < reg1) ? 0xFFFFFFFF : 0;
+				eax = pop();
+				TOS = (TOS < eax) ? 0xFFFFFFFF : 0;
 				break;
 
 			case EQ:
-				reg1 = pop();
-				TOS = (TOS == reg1) ? 0xFFFFFFFF : 0;
+				eax = pop();
+				TOS = (TOS == eax) ? 0xFFFFFFFF : 0;
 				break;
 
 			case GT:
-				reg1 = pop();
-				TOS = (TOS > reg1) ? 0xFFFFFFFF : 0;
+				eax = pop();
+				TOS = (TOS > eax) ? 0xFFFFFFFF : 0;
 				break;
 
 			case EMIT:
@@ -228,13 +237,10 @@ void run_program(CELL start)
 				break;
 
 			case OVER:
-				reg1 = pop();
-				reg2 = TOS;
-				push(reg1);
-				push(reg2);
-				break;
-
-			case COMPARE:
+				eax = pop();
+				ebx = TOS;
+				push(eax);
+				push(ebx);
 				break;
 
 			case DTOR:
@@ -249,19 +255,16 @@ void run_program(CELL start)
 				break;
 
 			case GETS:
-				reg1 = pop();
-				reg2 = (CELL)gets((char *)(reg1+1));
-				BYTE_AT(reg1) = StrLen((char *)reg1+1);
-				break;
-
-			case COMPAREI:
+				eax = pop();
+				ebx = (CELL)gets((char *)(eax+1));
+				BYTE_AT(eax) = StrLen((char *)eax+1);
 				break;
 
 			case SLASHMOD:
-				reg1 = pop();
-				reg2 = pop();
-				push(reg2%reg1);
-				push(reg2/reg1);
+				eax = pop();
+				ebx = pop();
+				push(ebx%eax);
+				push(ebx/eax);
 				break;
 
 			case NOT:
@@ -293,23 +296,9 @@ void run_program(CELL start)
 				break;
 
 			case PLUSSTORE:
-				reg1 = pop();
-				reg2 = pop();
-				CELL_AT(reg1) += reg2;
-				break;
-
-			case OPENBLOCK:
-				reg1 = 0;
-				// StrCpy(fn, "block-");
-				// StrCat(fn, "");
-				// StrCat(fn, ".txt");
-				// fopen(fn, "rt");
-				push(reg1);
-				break;
-
-			case CLOSEBLOCK:
-				reg1 = pop();
-				fclose((FILE *)reg1);
+				eax = pop();
+				ebx = pop();
+				CELL_AT(eax) += ebx;
 				break;
 
 			case INLINE:
@@ -321,13 +310,13 @@ void run_program(CELL start)
 				break;
 
 			case DOT:
-				reg1 = pop();
+				eax = pop();
 				if (BASE == 10)
-					printf("%d", reg1);
+					printf("%d", eax);
 				else if (BASE == 0x10)
-					printf("%x", reg1);
+					printf("%x", eax);
 				else
-					printf("(%d in base %d)", reg1, BASE);
+					printf("(%d in base %d)", eax, BASE);
 				break;
 
 			case HA:
@@ -366,10 +355,10 @@ void run_program(CELL start)
 			case GOTORC:
 			{
 				COORD pos;
-				reg1 = pop();
-				reg2 = pop();
-				pos.Y = (short)reg2;
-				pos.X = (short)reg1;
+				eax = pop();
+				ebx = pop();
+				pos.Y = (short)ebx;
+				pos.X = (short)eax;
 				SetConsoleCursorPosition(hStdout, pos);
 			}
 				break;
@@ -379,8 +368,8 @@ void run_program(CELL start)
 			{
 				COORD pos = { 0, 0 };
 				GetConsoleScreenBufferInfo(hStdout, &csbi);
-				reg1 = csbi.dwSize.X * csbi.dwSize.Y;
-				FillConsoleOutputCharacter(hStdout, ' ', reg1, pos, &reg2);
+				eax = csbi.dwSize.X * csbi.dwSize.Y;
+				FillConsoleOutputCharacter(hStdout, ' ', eax, pos, &ebx);
 				SetConsoleCursorPosition(hStdout, pos);
 			}
 				break;

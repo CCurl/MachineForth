@@ -25,7 +25,7 @@ OPCODE_T opcodes[] = {
         , { SWAP,          "SWAP",          }
         , { DROP,          "DROP",          }
         , { DUP,           "DUP",           }
-        , { SLITERAL,      "SLITERAL",      }
+        , { OVER,          "over",          }
         , { EMIT,          "emit",          }
         , { JMP,           "JMP",           }
         , { JMPZ,          "JMPZ",          }
@@ -42,13 +42,10 @@ OPCODE_T opcodes[] = {
         , { LT,            "<",             }
         , { EQ,            "=",             }
         , { GT,            ">",             }
-        , { OVER,          "over",          }
-        , { COMPARE,       "COMPARE",       }
         , { DTOR,          ">r",            }
         , { RTOD,          "r>",            }
         , { AND,           "AND",           }
         , { GETCH,         "GETCH",         }
-        , { COMPAREI,      "COMPAREI",      }
         , { SLASHMOD,      "/mod",          }
         , { NOT,           "NOT",           }
         , { RFETCH,        "RFETCH",        }
@@ -58,8 +55,6 @@ OPCODE_T opcodes[] = {
         , { SHIFTLEFT,     "2*",            }
         , { SHIFTRIGHT,    "2/",            }
         , { PLUSSTORE,     "+!",            }
-        , { OPENBLOCK,     "open-block",    }
-        , { CLOSEBLOCK,    "close-block",   }
         , { DOT,           "(.)",           }
         , { HA,            "(h)",           }
         , { BA,            "base",          }
@@ -276,6 +271,20 @@ char *parse_word(char *word, char *stream)
 		return stream;
 	}
 
+	if (strcmpi(word, "load") == 0) {
+		if (input_fp) {
+			fclose(input_fp);
+			input_fp = NULL;
+		}
+		char fn[24];
+		sprintf(fn, "block-%05d.fs", pop());
+		input_fp = fopen(fn, "rt");
+		if (!input_fp) {
+			printf("File '%s' not found", fn);
+		}
+		return stream;
+	}
+
 	DICT_T *ep = find_word(word);
 	if (ep)
 	{
@@ -383,6 +392,25 @@ bool read_binaries()
 	return true;
 }
 
+void dump_memory(FILE *fp)
+{
+	fprintf(fp, "\nMemory:\n----------------------------------------------------------\n");
+	BYTE *addr = the_memory;
+	int jmpBy = 0x10;
+	while ((CELL)addr < HERE)
+	{
+		fprintf(fp, "%08lX:", addr);
+		for (int i = 1; i <= jmpBy; i++)
+		{
+			fprintf(fp, " %02lX", addr[i-1]);
+			if ((i % 8) == 0)
+			 	fprintf(fp, " ");
+		}
+		addr += jmpBy;
+		fprintf(fp, "\n");
+	}
+}
+
 // ---------------------------------------------------------------------
 void write_output() 
 {
@@ -416,7 +444,10 @@ void write_output()
 		fprintf(fp, "#%02d ($%02x): %s\n", op->opcode, op->opcode, op->forth_prim);
 	}
 
+	dump_memory(fp);
+
 	fclose(fp);
+
 	if (!open_file(".INF", "wb", &fp)) return;
 	fwrite(&HERE, sizeof(CELL), 1, fp);
 	fwrite(&num_words, sizeof(num_words), 1, fp);
@@ -442,13 +473,20 @@ bool read()
 // ---------------------------------------------------------------------
 void REPL()
 {
+	FILE *fp = NULL;
+	open_file(".log", "at", &fp);
+	fprintf(fp, " --- new session ---\n");
 	while (true)
 	{
 		if (!input_fp) printf(" ok\n");
 		read();
-		if (strcmpi(input_buf, "bye") == 0) return;
+		if (input_buf[0] && (!input_fp)) {
+			fprintf(fp, "%s\n", input_buf);
+		}
+		if (strcmpi(input_buf, "bye") == 0) { break; }
 		execute(input_buf);
 	}
+	fclose(fp);
 }
 
 // ---------------------------------------------------------------------

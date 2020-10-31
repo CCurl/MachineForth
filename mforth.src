@@ -1,7 +1,7 @@
 \ boot-strap stuff ...
 \ #01 => lit, #02 => clit
-\ #13 => jmp, #14 => jmpz, #15 => jmpnz, #17 ret
-(h) @ #05 - dw the-memory #01 c, , #17 c,
+\ #13 => jmp, #14 => jmpz, #15 => jmpnz, #17 => ret
+(h) dw (here) #01 c, , #17 c,
 
 \ constant
 #04 dw cell #02 c, c, #17 c, inline
