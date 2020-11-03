@@ -344,18 +344,20 @@ char *parse_word(char *word, char *stream)
 }
 
 // ---------------------------------------------------------------------
-void execute(char *stream)
+int execute(char *stream)
 {
 	char word[64];
 	while (true)
 	{
 		stream = get_word(stream, word);
 		if (stream == NULL) break;
+		if (strcmpi(word, "bye") == 0) { return 1; }
 		stream = parse_word(word, stream);
 	}
 
 	the_memory[0] = JMP;
 	SETAT(1, the_words[num_words].XT);
+	return 0;
 }
 
 // ---------------------------------------------------------------------
@@ -474,9 +476,10 @@ bool read()
 void REPL()
 {
 	FILE *fp = NULL;
+	int isBye = 0;
 	open_file(".log", "at", &fp);
-	fprintf(fp, " --- new session ---\n");
-	while (true)
+	fprintf(fp, " \\ new session: (todo-get-date)\n");
+	while (! isBye)
 	{
 		if (!input_fp) printf(" ok\n");
 		read();
@@ -484,7 +487,7 @@ void REPL()
 			fprintf(fp, "%s\n", input_buf);
 		}
 		if (strcmpi(input_buf, "bye") == 0) { break; }
-		execute(input_buf);
+		isBye = execute(input_buf);
 	}
 	fclose(fp);
 }
