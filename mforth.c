@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "Shared.h"
 #include "forth-vm.h"
 
@@ -476,10 +477,18 @@ bool read()
 	return false;
 }
 
-void doHist(char *line) {
+void doHist(char *line, int addTS) {
 	FILE *fp = NULL;
 	open_file(".log", "at", &fp);
-	fprintf(fp, "%s\n", line);
+
+	fprintf(fp, "%s", line);
+	if (addTS) {
+		time_t ct = time(NULL);
+		struct tm *t = localtime(&ct);
+		fprintf(fp, "%d-%02d-%02d %02d:%02d:%02d", t->tm_year + 1900, 
+				t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	}
+	fprintf(fp, "\n");
 	fclose(fp);
 }
 
@@ -489,13 +498,13 @@ void REPL()
 	FILE *fp = NULL;
 	int isBye = 0;
 	open_file(".log", "at", &fp);
-	doHist("\\ new session: (todo: get-date)");
+	doHist("\\ new session: ", 1);
 	while (! isBye)
 	{
 		if (!input_fp) printf(" ok\n");
 		read();
 		if (input_buf[0] && (!input_fp)) {
-			doHist(input_buf);
+			doHist(input_buf, 0);
 		}
 		if (strcmpi(input_buf, "bye") == 0) { break; }
 		isBye = execute(input_buf);
