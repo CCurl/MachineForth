@@ -13,6 +13,8 @@ bool auto_run = false;
 #define BUF_SZ 1024
 char input_buf[BUF_SZ];
 FILE *input_fp = NULL;
+FILE *input_stack[16];
+int input_SP = 0;
 
 OPCODE_T opcodes[] = {
           { NOP,           "nop",           }
@@ -25,13 +27,16 @@ OPCODE_T opcodes[] = {
         , { SWAP,          "SWAP",          }
         , { DROP,          "DROP",          }
         , { DUP,           "DUP",           }
-        , { OVER,          "over",          }
-        , { EMIT,          "emit",          }
+        , { LT,            "<",             }
+        , { EQ,            "=",             }
+        , { GT,            ">",             }
         , { JMP,           "JMP",           }
         , { JMPZ,          "JMPZ",          }
         , { JMPNZ,         "JMPNZ",         }
         , { CALL,          "CALL",          }
         , { RET,           "RET",           }
+        , { OVER,          "over",          }
+        , { AND,           "AND",           }
         , { OR,            "OR",            }
         , { XOR,           "XOR",           }
         , { COM,           "COM",           }
@@ -39,13 +44,12 @@ OPCODE_T opcodes[] = {
         , { SUB,           "-",             }
         , { MUL,           "*",             }
         , { DIV,           "/",             }
-        , { LT,            "<",             }
-        , { EQ,            "=",             }
-        , { GT,            ">",             }
         , { DTOR,          ">r",            }
         , { RTOD,          "r>",            }
-        , { AND,           "AND",           }
-        , { GETCH,         "GETCH",         }
+        , { HA,            "(h)",           }
+        , { BA,            "base",          }
+        , { SA,            "state",         }
+        , { LA,            "last",          }
         , { SLASHMOD,      "/mod",          }
         , { NOT,           "NOT",           }
         , { RFETCH,        "RFETCH",        }
@@ -55,11 +59,6 @@ OPCODE_T opcodes[] = {
         , { SHIFTLEFT,     "2*",            }
         , { SHIFTRIGHT,    "2/",            }
         , { PLUSSTORE,     "+!",            }
-        , { DOT,           "(.)",           }
-        , { HA,            "(h)",           }
-        , { BA,            "base",          }
-        , { SA,            "state",         }
-        , { LA,            "last",          }
         , { COMMA,         ",",             }
         , { CCOMMA,        "c,",            }
         , { IMMEDIATE,     "immediate",     }
@@ -68,9 +67,12 @@ OPCODE_T opcodes[] = {
         , { SRC,           "src",           }
         , { TODST,         ">dst",          }
         , { DST,           "dst",           }
+        , { EMIT,          "emit",          }
         , { GOTORC,        "gotorc",        }
         , { CLS,           "cls",           }
         , { GETS,          "gets",          }
+        , { GETCH,         "GETCH",         }
+        , { DOT,           "(.)",           }
         , { BYE,           "BYE",           }
 		, { 0,             0,               }
 };
@@ -272,15 +274,14 @@ char *parse_word(char *word, char *stream)
 	}
 
 	if (strcmpi(word, "load") == 0) {
-		if (input_fp) {
-			fclose(input_fp);
-			input_fp = NULL;
-		}
 		char fn[24];
 		sprintf(fn, "block-%05d.fs", pop());
-		input_fp = fopen(fn, "rt");
-		if (!input_fp) {
+		FILE *fp = fopen(fn, "rt");
+		if (!fp) {
 			printf("File '%s' not found", fn);
+		} else {
+			input_stack[input_SP++] = input_fp;
+			input_fp = fp;
 		}
 		return stream;
 	}
@@ -465,11 +466,21 @@ bool read()
 		if (fgets(input_buf, BUF_SZ, input_fp) == input_buf)  return false;
 		fclose(input_fp);
 		input_fp = NULL;
+		if (input_SP > 0) {
+			input_fp = input_stack[--input_SP];
+		}
 		StrCpy(input_buf, "");
 		return true;
 	}
 	gets(input_buf);
 	return false;
+}
+
+void doHist(char *line) {
+	FILE *fp = NULL;
+	open_file(".log", "at", &fp);
+	fprintf(fp, "%s\n", line);
+	fclose(fp);
 }
 
 // ---------------------------------------------------------------------
@@ -478,18 +489,17 @@ void REPL()
 	FILE *fp = NULL;
 	int isBye = 0;
 	open_file(".log", "at", &fp);
-	fprintf(fp, " \\ new session: (todo-get-date)\n");
+	doHist("\\ new session: (todo: get-date)");
 	while (! isBye)
 	{
 		if (!input_fp) printf(" ok\n");
 		read();
 		if (input_buf[0] && (!input_fp)) {
-			fprintf(fp, "%s\n", input_buf);
+			doHist(input_buf);
 		}
 		if (strcmpi(input_buf, "bye") == 0) { break; }
 		isBye = execute(input_buf);
 	}
-	fclose(fp);
 }
 
 // ---------------------------------------------------------------------
