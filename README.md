@@ -1,7 +1,7 @@
 # MachineForth
-This is a compiler/vm for a bare-bones Forth VM.
+This is a compiler/vm for a bare-bones Forth VM. NOTE: this is NOT related to, is any way, the Machine Forth of the great Chuck Moore.
 
-It was inspired by Chuck Moore's "Machine Forth".  Please refer to this for more information:
+This was inspired by Chuck Moore's "Machine Forth".  Please refer to this for more information:
 
 http://www.ultratechnology.com/mfp21.htm
 
