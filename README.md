@@ -1,5 +1,5 @@
 # MachineForth
-This is a compiler/vm for a bare-bones Forth VM. NOTE: this is NOT related to, is any way, the Machine Forth of the great Chuck Moore.
+This is a compiler/vm for a bare-bones Forth VM. NOTE: this is NOT related to, in any way, the Machine Forth of the great Chuck Moore.
 
 NOTE: This is very old. A newer, and more useable version can be found here: https://github.com/CCurl/cccForth
 
