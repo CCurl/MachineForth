@@ -60,6 +60,7 @@ dkms.conf
 
 # mf specific
 mf.bin
+mf
 mf.s
 mf.txt
 /.vs/mf/v16
