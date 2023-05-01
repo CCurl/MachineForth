@@ -1,11 +1,12 @@
 MF is a system based on my understanding of Chuck Moore's 'Machine Forth'.
+
 MF is based on the MuP21 (Machine Forth VM) opcodes, with some liberties taken.
 
 Obvious differences:
-    - Machine Forth uses 20-bit cells, MF uses 32-bit cells
-    - Machine Forth only supports word addressing, MF supports both word and byte addressing
-    - Machine Forth packs 4 5-bit instructions into one word, in MF each instruction is 1 byte
-    - MF uses unused MuP21 opcpdes 5, 6, 7, 8, 12, and 14.
+- Machine Forth uses 20-bit cells, MF uses 32-bit cells
+- Machine Forth only supports word addressing, MF supports both word and byte addressing
+- Machine Forth packs 4 5-bit instructions into one word, in MF each instruction is 1 byte
+- MF uses unused MuP21 opcpdes 5, 6, 7, 8, 12, and 14.
 
 From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
 ```
