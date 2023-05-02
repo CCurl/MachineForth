@@ -1,49 +1,61 @@
--d- immediate 8 111 7 14  8 113 7  17 23 29  8 2  5 1 -e-
+-ML- immediate 8 111 7  14  8 113 7  17 23 29  8 2  5 1 -X-
 immediate
--d- inline    8 111 7 14  8 113 7  17 23 29  8 4  5 1 -e- immediate
+-ML- inline    8 111 7  14  8 113 7  17 23 29  8 4  5 1 -X- immediate
 
--d- : 8 108 7 1 -e- immediate
--d- ;     1 -e- inline
--d- !AC   5 -e- inline
--d- @AC   6 -e- inline
--d- SYS   7 -e- inline
--d- @A+   9 -e- inline
--d- @A   11 -e- inline
--d- !    12 -e- inline
--d- !A+  13 -e- inline
--d- @    14 -e- inline
--d- !A   15 -e- inline
--d- COM  16 -e- inline
--d- 2*   17 -e- inline
--d- 2/   18 -e- inline
--d- +*   19 -e- inline
--d- XOR  20 -e- inline
--d- AND  21 -e- inline
--d- +    23 -e- inline
--d- R>   24 -e- inline
--d- A    25 -e- inline
--d- AND  25 -e- inline
--d- DUP  26 -e- inline
--d- OVER 27 -e- inline
--d- >R   28 -e- inline
--d- >A   29 -e- inline
--d- DROP 31 -e- inline
+-ML- ;      1  1 -X- inline
+-ML- !AC    5  1 -X- inline
+-ML- @AC    6  1 -X- inline
+-ML- SYS    7  1 -X- inline
+-ML- LIT1   8  1 -X- inline
+-ML- @A+    9  1 -X- inline
+-ML- @A    11  1 -X- inline
+-ML- !     12  1 -X- inline
+-ML- !A+   13  1 -X- inline
+-ML- @     14  1 -X- inline
+-ML- !A    15  1 -X- inline
+-ML- COM   16  1 -X- inline
+-ML- 2*    17  1 -X- inline
+-ML- 2/    18  1 -X- inline
+-ML- +*    19  1 -X- inline
+-ML- XOR   20  1 -X- inline
+-ML- AND   21  1 -X- inline
+-ML- +     23  1 -X- inline
+-ML- R>    24  1 -X- inline
+-ML- A     25  1 -X- inline
+-ML- AND   25  1 -X- inline
+-ML- DUP   26  1 -X- inline
+-ML- OVER  27  1 -X- inline
+-ML- >R    28  1 -X- inline
+-ML- >A    29  1 -X- inline
+-ML- DROP  31  1 -X- inline
 
-: emit   101 SYS ;
-: .      102 SYS ;
-: .h     103 SYS ;
-: fopen  104 SYS ;
-: fclose 105 SYS ;
-: C,     106 SYS ;
-: ,      107 SYS ;
-: create 108 SYS ;
-: find   109 SYS ;
-: (H)    110 SYS ;
-: (L)    111 SYS ;
-: state  112 SYS ;
-: CELL   113 SYS ;
+-ML- : 8 108 7 1 -X- immediate
 
-: space   32 emit ;
-: bye state >A 999 !A ;
+: EMIT   101 SYS ; inline
+: .D     102 SYS ; inline
+: .H     103 SYS ; inline
+: FOPEN  104 SYS ; inline
+: FCLOSE 105 SYS ; inline
+: C,     106 SYS ; inline
+: ,      107 SYS ; inline
+: CREATE 108 SYS ; inline
+: FIND   109 SYS ; inline
+: (H)    110 SYS ; inline
+: (L)    111 SYS ; inline
+: (ST)   112 SYS ; inline
+: CELL   113 SYS ; inline
+: MEM    114 SYS ; inline
+: MEM-SZ 115 SYS ; inline
 
-123 DUP .h space . space 65 emit
+: sp   32 EMIT ; inline
+: bye (ST) >A 999 !A ;
+: negate COM 1 + ;
+: - negate + ;
+: .d .D sp ;
+: .h .H sp ;
+
+: H (H) @ ; : L (L) @ ;
+
+H MEM - .d 
+MEM MEM-SZ + L - .d
+L H - .d

@@ -144,7 +144,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="core.f" />
+    <None Include="mf.f" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
