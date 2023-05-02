@@ -2,14 +2,20 @@
 
 MF is a Machine-Forth like system based on the MuP21 opcodes, with some liberties taken.
 
-Obvious differences:
+Some obvious differences between MachineForth and MF:
 - Machine Forth uses 20-bit cells, MF uses 32-bit cells
 - Machine Forth only supports word addressing, MF supports both word and byte addressing
 - Machine Forth packs 4 5-bit instructions into one word, in MF each instruction is 1 byte
-- MF uses unused MuP21 opcpdes 5, 6, 7, 8, 12, and 14.
+- MF uses MuP21 opcodes that are not used: 5, 6, 7, 8, 12, and 14.
 
-## MF workflow
-The MF workflow in MF is very simple and minimal:
+## MF Process Flow
+The process flow in MF is very simple and minimal. H is the "here pointer", and L is the "last pointer".
+
+Notice that the input source is always compiled. In repl(), at the end of each line:
+- If L DID NOT change, it executes what has been compiled, and then resets H to its initial value.
+- If L DID change, that means a new word was created, so it does NOT execute or reset H.
+
+Here is the relevant code:
 ```
 int parse(const char *cp) {
     in = (char*)cp;
@@ -130,13 +136,13 @@ From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
 ```
    CODE Name     Function
    ---- -------- ----------------------------
-   00   JUMP     Jump to 10 bit address in the lower 10 bits of the current word.
+   00   JUMP     jump to 10 bit address in the lower 10 bits of the current word.
                      (MuP21: Must be the first or second instruction in a word)
-   01   ;'       Subroutine return. Pop the address from the top of the return stack
+   01   ;'       subroutine return. Pop the address from the top of the return stack
                      and jump to it.
-   02   T=0      Jump if T=0
-   03   C=0      Jump if carry is reset
-   04   CALL     Subroutine call. Push the address of the next location in memory to the 
+   02   T=0      jump if T=0
+   03   C=0      jump if carry is reset
+   04   CALL     subroutine call. Push the address of the next location in memory to the 
                      return stack, and jump to the 10 bit address in the lower 10 bits of 
                      the current word.
    05   !AC      MuP21 unused (MF: used for !AC)
@@ -158,13 +164,13 @@ From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
    16   COM      complement all bits in T (top of data stack)
    17   2*       shift T left 1 bit (the bottom bit becomes 0)
    18   2/       shift T right 1 bit (the top bit remains unchanged)
-   19   +*       Add the second item on the data stack to the top item without 
+   19   +*       add the second item on the data stack to the top item without 
                      removing the second item, if the least signifigant bit of T is 1
    20   XOR      remove the top two items from the data stack and replace them with the result
                      of logically exclusively-oring them together
    21   AND      remove the top two items from the data stack and replace them with the result
                      of logically and-ing them together
-   22            MuP21 unused
+   22   U22      MuP21 unused
    23   +        remove the top two items from the data stack and replace them with the result
                      of adding them together
    24   POP      move one item from the return stack to the data stack
@@ -182,16 +188,16 @@ System operations
    CODE Name     Function
    ---- -------- ----------------------------
    101  EMIT     output 1 character (n--)
-   102  .        print 1 number in base 10
-   103  .h       print 1 number in base 16
-   104  fopen    open file (nm md-fh)
-   105  fclose   close file (fh--)
+   102  .D       print 1 number in base 10
+   103  .H       print 1 number in base 16
+   104  FOPEN    open file (nm md-fh)
+   105  FCLOSE   close file (fh--)
    106  C,       standard Forth c, (b--)
    107  ,        standard Forth ,  (n--)
-   108  create   puts the next word into the dictionary (--)
-   109  find     search for the next word in the dictionary (--dp)
+   108  CREATE   puts the next word into the dictionary (--)
+   109  FIND     search for the next word in the dictionary (--dp)
    100  (H)      address of H (HERE) (--a)
    111  (L)      address of L (LAST) (--a)
-   112  state    address of ST (STATE) (--a)
+   112  (ST)     address of ST (STATE) (--a)
    113  CELL     size of a CELL (--n)
 ```
