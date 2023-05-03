@@ -1,9 +1,14 @@
+-ML- JMP    0  1 -X-  INLINE
 -ML- ;      1  1 -X-  INLINE
+-ML- T=0    2  1 -X-  INLINE
+-ML- T<>0   3  1 -X-  INLINE
+-ML- CALL   4  1 -X-  INLINE
 -ML- !AC    5  1 -X-  INLINE
 -ML- @AC    6  1 -X-  INLINE
 -ML- SYS    7  1 -X-  INLINE
 -ML- LIT1   8  1 -X-  INLINE
 -ML- @A+    9  1 -X-  INLINE
+-ML- LIT   10  1 -X-  INLINE
 -ML- @A    11  1 -X-  INLINE
 -ML- !     12  1 -X-  INLINE
 -ML- !A+   13  1 -X-  INLINE
@@ -15,6 +20,7 @@
 -ML- +*    19  1 -X-  INLINE
 -ML- XOR   20  1 -X-  INLINE
 -ML- AND   21  1 -X-  INLINE
+-ML- U22   22  1 -X-  INLINE
 -ML- +     23  1 -X-  INLINE
 -ML- R>    24  1 -X-  INLINE
 -ML- A     25  1 -X-  INLINE

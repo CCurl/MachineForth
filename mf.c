@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
+#include <stdint.h>
 
-#define MEM_SZ      1024*1024
+#define MEM_SZ      4*1024*1024
 #define STK_SZ      31
 
 #define BCASE       break; case
@@ -14,7 +14,7 @@
 #define BTW(n,l,h) ((l<=n)&(n<=h))
 
 typedef enum {
-    JUMP=0, RET, JMPT0, JMPC0, CALL, ACSTORE, ACAT, SYS,
+    JUMP=0, RET, JMPT0, JMPT1, CALL, ACSTORE, ACAT, SYS,
     LIT1, AATINC, LIT, AAT, STORE, ASTOREINC, FETCH, ASTORE,
     COM, TIMES2, DIV2, ADDMULT, XOR, AND, U22, ADD,
     POPR, AVALUE, DUP, OVER, PUSHR, TOA, NOP, DROP
@@ -26,11 +26,11 @@ typedef enum {
 } SYS_ops;
 
 typedef unsigned char byte;
-typedef long cell_t;
+typedef int64_t cell_t;
 typedef struct { cell_t next, xt; byte f, l; char name[32]; } de_t;
 
 cell_t stk[STK_SZ+1], rstk[STK_SZ+1];
-cell_t sp, rsp, t, n, a, cf, st, input_fp;
+cell_t sp, rsp, t, n, A, ST, input_fp;
 char tib[128], wd[32], *in = &tib[0];
 byte *H, *L, mem[MEM_SZ];
 
@@ -118,7 +118,7 @@ void sysOP(cell_t op) {
         BCASE FIND:   find(0);
         BCASE HA:     push((cell_t)&H);
         BCASE LA:     push((cell_t)&L);
-        BCASE STA:    push((cell_t)&st);
+        BCASE STA:    push((cell_t)&ST);
         BCASE CSZ:    push(CELL_SZ);
         BCASE MEMST:  push((cell_t)&mem[0]);
         BCASE MEMSZ:  push(MEM_SZ);
@@ -135,19 +135,19 @@ void run(byte *pc) {
         case  JUMP: pc = (byte*)GetNumAt(pc); 
         NCASE RET: if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
         NCASE JMPT0: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE JMPC0: if (cf != 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE JMPT1: if (S0 != 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE CALL: rpush((cell_t)pc+CELL_SZ); pc = (byte*)GetNumAt(pc);
-        NCASE ACSTORE: *(byte*)a = (byte)pop();         // NON-standard, AC! 
-        NCASE ACAT: push(*(byte*)a);                    // NON-standard, AC@
+        NCASE ACSTORE: *(byte*)A = (byte)pop();         // NON-standard, AC! 
+        NCASE ACAT: push(*(byte*)A);                    // NON-standard, AC@
         NCASE SYS: sysOP(pop());                        // NON-standard
         NCASE LIT1: push(*(pc++));                      // NON-standard
-        NCASE AATINC: push(GetNumAt((byte*)(a++)));
+        NCASE AATINC: push(GetNumAt((byte*)(A++)));
         NCASE LIT: push(GetNumAt(pc)); pc += CELL_SZ;
-        NCASE AAT: push(GetNumAt((byte*)a));
+        NCASE AAT: push(GetNumAt((byte*)A));
         NCASE STORE: SetNumAt((byte*)S0,S1); sp-=2;      // NON-standard
-        NCASE ASTOREINC: SetNumAt((byte*)(a++),pop());
+        NCASE ASTOREINC: SetNumAt((byte*)(A++),pop());
         NCASE FETCH: S0 = GetNumAt((byte*)S0);           // NON-standard, FORTH @
-        NCASE ASTORE: SetNumAt((byte*)a, pop());
+        NCASE ASTORE: SetNumAt((byte*)A, pop());
         NCASE COM: S0 = ~S0;
         NCASE TIMES2: S0 *= 2;
         NCASE DIV2:   S0 /= 2;
@@ -157,11 +157,11 @@ void run(byte *pc) {
         NCASE U22:                                      // Unused
         NCASE ADD: t=pop(); S0 += t;
         NCASE POPR: push(rpop());
-        NCASE AVALUE: push(a);
+        NCASE AVALUE: push(A);
         NCASE DUP: t=S0; push(t);
         NCASE OVER: t=S1; push(t);
         NCASE PUSHR: rpush(pop());
-        NCASE TOA: a = pop();
+        NCASE TOA: A = pop();
         NCASE NOP: // NOP
         NCASE DROP: sp = (0<sp) ? sp-1: 0;
         default: printf("-ir:%u?-",*(pc-1)); return;
@@ -250,6 +250,6 @@ int main(int argc, char **argv) {
     parse("-ML- IMMEDIATE 8 116 7 1 -X-");
     repl("IMMEDIATE");
     parse("-ML- INLINE 8 117 7 1 -X- IMMEDIATE");
-    while (st != 999) { repl(getInput()); }
+    while (ST != 999) { repl(getInput()); }
     return 0;
 }

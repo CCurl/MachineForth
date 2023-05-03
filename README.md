@@ -8,6 +8,16 @@ Some obvious differences between MachineForth and MF:
 - Machine Forth packs 4 5-bit instructions into one word, in MF each instruction is 1 byte
 - MF uses MuP21 opcodes that are not used: 5, 6, 7, 8, 12, and 14.
 
+## Building MF
+### Windows:
+- There is a Visual Studio solution file, mf.sln
+- For 32-bit, make the typedef for cell_t int32_t
+- For 64-bit, make the typedef for cell_t int64_t (there will be some warnings)
+### Linux:
+- There is a simple make script
+- It builds mf (32-bit) and mf64 (64-bit)
+- It uses clang, but you sould also be able to use gcc
+
 ## MF Process Flow
 The process flow in MF is very simple and minimal. "H" is the "here pointer", and "L" is the "last pointer".
 
@@ -108,8 +118,8 @@ From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
                      (MuP21: Must be the first or second instruction in a word)
    01   ;'       subroutine return. Pop the address from the top of the return stack
                      and jump to it.
-   02   T=0      jump if T=0
-   03   C=0      jump if carry is reset
+   02   T=0      jump if T == 0
+   03   T<>0     MuP21: jump if carry is set (MF: jump if T != 0)
    04   CALL     subroutine call. Push the address of the next location in memory to the 
                      return stack, and jump to the 10 bit address in the lower 10 bits of 
                      the current word.
