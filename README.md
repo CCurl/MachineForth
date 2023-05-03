@@ -9,11 +9,11 @@ Some obvious differences between MachineForth and MF:
 - MF uses MuP21 opcodes that are not used: 5, 6, 7, 8, 12, and 14.
 
 ## MF Process Flow
-The process flow in MF is very simple and minimal. H is the "here pointer", and L is the "last pointer".
+The process flow in MF is very simple and minimal. "H" is the "here pointer", and "L" is the "last pointer".
 
 Notice that the input source is always compiled. In repl(), at the end of each line:
-- If L DID NOT change, it executes what has been compiled, and then resets H to its initial value.
-- If L DID change, that means a new word was created, so it does NOT execute or reset H.
+- If "L" changed, that means a new word was created, so it does NOT execute or reset "H".
+- Else, so reset "H" back to its initial value and execute what was compiled.
 
 Here is the relevant code:
 ```
