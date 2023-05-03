@@ -10,7 +10,7 @@
 #define S0          stk[sp]
 #define S1          stk[sp-1]
 #define MEMB(x)     mem[(x)]
-#define CELL_SZ     sizeof(long)
+#define CELL_SZ     sizeof(cell_t)
 #define BTW(n,l,h) ((l<=n)&(n<=h))
 
 typedef enum {
@@ -26,28 +26,29 @@ typedef enum {
 } SYS_ops;
 
 typedef unsigned char byte;
-typedef struct { long next, xt; byte f, l; char name[32]; } de_t;
+typedef long cell_t;
+typedef struct { cell_t next, xt; byte f, l; char name[32]; } de_t;
 
-long stk[STK_SZ+1], rstk[STK_SZ+1];
-long sp, rsp, t, n, a, cf, st, input_fp;
+cell_t stk[STK_SZ+1], rstk[STK_SZ+1];
+cell_t sp, rsp, t, n, a, cf, st, input_fp;
 char tib[128], wd[32], *in = &tib[0];
 byte *H, *L, mem[MEM_SZ];
 
-void push(long x) { stk[++sp] = x; }
-long pop() { return stk[sp--]; }
+void push(cell_t x) { stk[++sp] = x; }
+cell_t pop() { return stk[sp--]; }
 
-void rpush(long x) { rstk[++rsp] = x; }
-long rpop() { return rstk[rsp--]; }
+void rpush(cell_t x) { rstk[++rsp] = x; }
+cell_t rpop() { return rstk[rsp--]; }
 
 #ifndef NEEDS_ALIGN
-    long GetNumAt(byte *a) { return *(long*)a; }
-    void SetNumAt(byte *a, long val) { *(long*)a = val; } 
+    cell_t GetNumAt(byte *a) { return *(cell_t*)a; }
+    void SetNumAt(byte *a, cell_t val) { *(cell_t*)a = val; } 
 #else
-    long GetNumAt(byte *a) {
+    cell_t GetNumAt(byte *a) {
         return *a | *(a+1)<<8 | *(a+2)<<16 | *(a+2)<<24;
     }
 
-    void SetNumAt(byte *a, long val) {
+    void SetNumAt(byte *a, cell_t val) {
         *a = (val & 0xFF);
         *(a+1) = (val>>8 & 0xFF);
         *(a+2) = (val>>16 & 0xFF);
@@ -55,8 +56,8 @@ long rpop() { return rstk[rsp--]; }
     }
 #endif
 
-void CComma(long x) { *(H++) = (byte)x; }
-void Comma(long x) { SetNumAt(H, x); H += CELL_SZ; }
+void CComma(cell_t x) { *(H++) = (byte)x; }
+void Comma(cell_t x) { SetNumAt(H, x); H += CELL_SZ; }
 
 int nextWord() {
     int l = 0;
@@ -86,8 +87,8 @@ void create(const char *name) {
     int l = strLen(name);
     int sz = (CELL_SZ*2)+4+l;
     de_t *dp = (de_t*)(L-sz);
-    dp->next = (long)L;
-    dp->xt = (long)H;
+    dp->next = (cell_t)L;
+    dp->xt = (cell_t)H;
     dp->f = 0;
     dp->l = l;
     strCpy(dp->name, name);
@@ -104,22 +105,22 @@ de_t *find(const char *name) {
     return 0;
 }
 
-void sysOP(long op) {
+void sysOP(cell_t op) {
     switch (op) {
         case  EMIT:   putchar((int)pop());
         BCASE DOT10:  printf("%ld", pop());
         BCASE DOT16:  printf("%lx", pop());
-        BCASE FOPEN:  n=pop(); t=pop(); push((long)fopen((char*)t, (char*)n));
+        BCASE FOPEN:  n=pop(); t=pop(); push((cell_t)fopen((char*)t, (char*)n));
         BCASE FCLOSE: t=pop(); fclose((FILE*)t);
         BCASE CCOMMA: t=pop(); CComma(t);
         BCASE COMMA:  t=pop(); Comma(t);
         BCASE CREATE: create(0);
         BCASE FIND:   find(0);
-        BCASE HA:     push((long)&H);
-        BCASE LA:     push((long)&L);
-        BCASE STA:    push((long)&st);
+        BCASE HA:     push((cell_t)&H);
+        BCASE LA:     push((cell_t)&L);
+        BCASE STA:    push((cell_t)&st);
         BCASE CSZ:    push(CELL_SZ);
-        BCASE MEMST:  push((long)&mem[0]);
+        BCASE MEMST:  push((cell_t)&mem[0]);
         BCASE MEMSZ:  push(MEM_SZ);
         BCASE IMM:    { de_t *dp=(de_t*)L; dp->f = 2; }
         BCASE INL:    { de_t *dp=(de_t*)L; dp->f = 4; }
@@ -135,7 +136,7 @@ void run(byte *pc) {
         NCASE RET: if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
         NCASE JMPT0: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE JMPC0: if (cf != 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE CALL: rpush((long)pc+CELL_SZ); pc = (byte*)GetNumAt(pc);
+        NCASE CALL: rpush((cell_t)pc+CELL_SZ); pc = (byte*)GetNumAt(pc);
         NCASE ACSTORE: *(byte*)a = (byte)pop();         // NON-standard, AC! 
         NCASE ACAT: push(*(byte*)a);                    // NON-standard, AC@
         NCASE SYS: sysOP(pop());                        // NON-standard
@@ -168,7 +169,7 @@ void run(byte *pc) {
 }
 
 int parseNum(const char *cp) {
-    long x = 0;
+    cell_t x = 0;
     while (BTW(*cp,'0','9')) {
         x = (x*10) + (*(cp++)-'0');
     }
@@ -242,10 +243,10 @@ int main(int argc, char **argv) {
     H = &MEMB(0);
     L = &MEMB(MEM_SZ);
     if (2 <= argc) {
-        input_fp = (long)fopen(argv[1],"rb");
+        input_fp = (cell_t)fopen(argv[1],"rb");
         if (input_fp) { printf("Cannot open: %s\n", argv[1]); }
     }
-    if (!input_fp) { input_fp = (long)fopen("mf.f","rb"); }
+    if (!input_fp) { input_fp = (cell_t)fopen("mf.f","rb"); }
     parse("-ML- IMMEDIATE 8 116 7 1 -X-");
     repl("IMMEDIATE");
     parse("-ML- INLINE 8 117 7 1 -X- IMMEDIATE");
