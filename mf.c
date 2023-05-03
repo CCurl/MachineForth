@@ -26,7 +26,7 @@ typedef enum {
 } SYS_ops;
 
 typedef unsigned char byte;
-typedef int64_t cell_t;
+typedef long cell_t;
 typedef struct { cell_t next, xt; byte f, l; char name[32]; } de_t;
 
 cell_t stk[STK_SZ+1], rstk[STK_SZ+1];

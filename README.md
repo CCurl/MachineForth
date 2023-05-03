@@ -12,11 +12,16 @@ Some obvious differences between MachineForth and MF:
 ### Windows:
 - There is a Visual Studio solution file, mf.sln
 - For 32-bit, make the typedef for cell_t int32_t
-- For 64-bit, make the typedef for cell_t int64_t (there will be some warnings)
+- For 64-bit, make the typedef for cell_t int64_t
+- NOTE: the 64-bit build generates warnings about format strings, but they are not a problem
+
 ### Linux:
-- There is a simple make script
+- There is a simple ./make script
 - It builds mf (32-bit) and mf64 (64-bit)
-- It uses clang, but you sould also be able to use gcc
+- It uses clang, but gcc should work too
+- Make the typedef for cell_t long
+- clang automatically interprets longs as 64-bit when -m64 is specified
+- clang automatically interprets longs as 32-bit when -m32 is specified
 
 ## MF Process Flow
 The process flow in MF is very simple and minimal. "H" is the "here pointer", and "L" is the "last pointer".
