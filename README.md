@@ -11,20 +11,21 @@ Some obvious differences between MachineForth and MF:
 ## MF Process Flow
 The process flow in MF is very simple and minimal. "H" is the "here pointer", and "L" is the "last pointer".
 
-Notice that the input source is always compiled. In repl(), at the end of each line:
-- If "L" changed, that means a new word was created, so it does NOT execute or reset "H".
-- Else, so reset "H" back to its initial value and execute what was compiled.
+The input source is always compiled. This is why some words are IMMEDIATE in MF.
+
+In repl(), at the end of each line:
+- If "L" didn't change, reset "H" back to its initial value and execute what was compiled.
+- Othewise, "L" changed, meaning a word was created, so don't execute.
 
 Here is the relevant code:
 ```
 int parse(const char *cp) {
     in = (char*)cp;
     while (nextWord()) {
-        //printf("-re:%s-",wd);
-        if (isML(wd)) { continue; }
         if (isNum(wd)) { continue; }
         if (isWord(wd)) { continue; }
-        printf("-%s?-",wd);
+        if (isML(wd)) { continue; }
+        printf("-%s?-\n",wd);
         return 0;
     }
     return 1;
@@ -41,9 +42,8 @@ char *getInput() {
     return tib;
 }
 
-void repl(char *cp) {
+void repl(const char *cp) {
     byte *cH=H, *cL=L;
-    if (cp == 0) { cp = getInput(); }
     if (parse(cp) == 0) { H=cH; return; }
     if (cL == L) { CComma(RET); H=cH; run(H); }
 }
@@ -57,15 +57,18 @@ int main(int argc, char **argv) {
         if (input_fp) { printf("Cannot open: %s\n", argv[1]); }
     }
     if (!input_fp) { input_fp = (long)fopen("mf.f","rb"); }
-    while (st != 999) { repl(0); }
+    parse("-ML- IMMEDIATE 8 116 7 1 -X-");
+    repl("IMMEDIATE");
+    parse("-ML- INLINE 8 117 7 1 -X- IMMEDIATE");
+    while (st != 999) { repl(getInput()); }
     return 0;
 }
 ```
 
 ## Bootstrapping MF
-Bootstrapping MF uses the "Machine Language" mode, implemented in isML(wd) function:
+MF has a "Machine-Language" mode, implemented in isML(wd) function:
 ```
-int isML(char *cp) {
+int isML(const char *cp) {
     if (!strEq(cp, "-ML-")) { return 0; }
     create(0);
     while (nextWord()) {
@@ -77,59 +80,24 @@ int isML(char *cp) {
 }
 ```
 
-That can be used to define words:
+MF also defines exactly 2 words: IMMEDIATE and INLINE. 
+
+These 2 words, along with "Machine Language" mode, can be used to define words:
 ```
--ML- immediate 8 111 7  14  8 113 7  17 23 29  8 2  5 1 -X-
-immediate
--ML- inline    8 111 7  14  8 113 7  17 23 29  8 4  5 1 -X- immediate
+-ML- ;      1  1 -X-  INLINE
+-ML- !AC    5  1 -X-  INLINE
+-ML- @AC    6  1 -X-  INLINE
+-ML- SYS    7  1 -X-  INLINE
 
--ML- ;      1  1 -X- inline
--ML- !AC    5  1 -X- inline
--ML- @AC    6  1 -X- inline
--ML- SYS    7  1 -X- inline
--ML- LIT1   8  1 -X- inline
--ML- @A+    9  1 -X- inline
--ML- @A    11  1 -X- inline
--ML- !     12  1 -X- inline
--ML- !A+   13  1 -X- inline
--ML- @     14  1 -X- inline
--ML- !A    15  1 -X- inline
--ML- COM   16  1 -X- inline
--ML- 2*    17  1 -X- inline
--ML- 2/    18  1 -X- inline
--ML- +*    19  1 -X- inline
--ML- XOR   20  1 -X- inline
--ML- AND   21  1 -X- inline
--ML- +     23  1 -X- inline
--ML- R>    24  1 -X- inline
--ML- A     25  1 -X- inline
--ML- AND   25  1 -X- inline
--ML- DUP   26  1 -X- inline
--ML- OVER  27  1 -X- inline
--ML- >R    28  1 -X- inline
--ML- >A    29  1 -X- inline
--ML- DROP  31  1 -X- inline
+...
 
--ML- : 8 108 7 1 -X- immediate
+-ML- : 8 108 7 1 -X- IMMEDIATE
 
-: emit   101 SYS ; inline
-: .      102 SYS ; inline
-: .h     103 SYS ; inline
-: fopen  104 SYS ; inline
-: fclose 105 SYS ; inline
-: C,     106 SYS ; inline
-: ,      107 SYS ; inline
-: create 108 SYS ; inline
-: find   109 SYS ; inline
-: (H)    110 SYS ; inline
-: (L)    111 SYS ; inline
-: state  112 SYS ; inline
-: CELL   113 SYS ; inline
+: EMIT   101 SYS ; INLINE
 
-: space   32 emit ; inline
-: bye state >A 999 !A ;
+...
 
-123 DUP .h space . space 65 emit
+: bye (ST) >A 999 !A ;
 ```
 ## MF Reference
 From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
@@ -200,4 +168,8 @@ System operations
    111  (L)      address of L (LAST) (--a)
    112  (ST)     address of ST (STATE) (--a)
    113  CELL     size of a CELL (--n)
+   114  MEM      address of the beginning of MF's memory
+   115  MEM-SZ   size in bytes of MF's memory
+   116  IMM      mark the most recent WORD as IMMEDIATE
+   117  INL      mark the most recent WORD as INLINE
 ```

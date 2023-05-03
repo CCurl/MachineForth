@@ -1,53 +1,51 @@
--ML- immediate 8 111 7  14  8 113 7  17 23 29  8 2  5 1 -X-
-immediate
--ML- inline    8 111 7  14  8 113 7  17 23 29  8 4  5 1 -X- immediate
+-ML- ;      1  1 -X-  INLINE
+-ML- !AC    5  1 -X-  INLINE
+-ML- @AC    6  1 -X-  INLINE
+-ML- SYS    7  1 -X-  INLINE
+-ML- LIT1   8  1 -X-  INLINE
+-ML- @A+    9  1 -X-  INLINE
+-ML- @A    11  1 -X-  INLINE
+-ML- !     12  1 -X-  INLINE
+-ML- !A+   13  1 -X-  INLINE
+-ML- @     14  1 -X-  INLINE
+-ML- !A    15  1 -X-  INLINE
+-ML- COM   16  1 -X-  INLINE
+-ML- 2*    17  1 -X-  INLINE
+-ML- 2/    18  1 -X-  INLINE
+-ML- +*    19  1 -X-  INLINE
+-ML- XOR   20  1 -X-  INLINE
+-ML- AND   21  1 -X-  INLINE
+-ML- +     23  1 -X-  INLINE
+-ML- R>    24  1 -X-  INLINE
+-ML- A     25  1 -X-  INLINE
+-ML- AND   25  1 -X-  INLINE
+-ML- DUP   26  1 -X-  INLINE
+-ML- OVER  27  1 -X-  INLINE
+-ML- >R    28  1 -X-  INLINE
+-ML- >A    29  1 -X-  INLINE
+-ML- DROP  31  1 -X-  INLINE
 
--ML- ;      1  1 -X- inline
--ML- !AC    5  1 -X- inline
--ML- @AC    6  1 -X- inline
--ML- SYS    7  1 -X- inline
--ML- LIT1   8  1 -X- inline
--ML- @A+    9  1 -X- inline
--ML- @A    11  1 -X- inline
--ML- !     12  1 -X- inline
--ML- !A+   13  1 -X- inline
--ML- @     14  1 -X- inline
--ML- !A    15  1 -X- inline
--ML- COM   16  1 -X- inline
--ML- 2*    17  1 -X- inline
--ML- 2/    18  1 -X- inline
--ML- +*    19  1 -X- inline
--ML- XOR   20  1 -X- inline
--ML- AND   21  1 -X- inline
--ML- +     23  1 -X- inline
--ML- R>    24  1 -X- inline
--ML- A     25  1 -X- inline
--ML- AND   25  1 -X- inline
--ML- DUP   26  1 -X- inline
--ML- OVER  27  1 -X- inline
--ML- >R    28  1 -X- inline
--ML- >A    29  1 -X- inline
--ML- DROP  31  1 -X- inline
+-ML- : 8 108 7 1 -X- IMMEDIATE
 
--ML- : 8 108 7 1 -X- immediate
+: EMIT   101 SYS ; INLINE
+: .D     102 SYS ; INLINE
+: .H     103 SYS ; INLINE
+: FOPEN  104 SYS ; INLINE
+: FCLOSE 105 SYS ; INLINE
+: C,     106 SYS ; INLINE
+: ,      107 SYS ; INLINE
+: CREATE 108 SYS ; INLINE
+: FIND   109 SYS ; INLINE
+: (H)    110 SYS ; INLINE
+: (L)    111 SYS ; INLINE
+: (ST)   112 SYS ; INLINE
+: CELL   113 SYS ; INLINE
+: MEM    114 SYS ; INLINE
+: MEM-SZ 115 SYS ; INLINE
+: IMM    116 SYS ; INLINE
+: INL    117 SYS ; INLINE
 
-: EMIT   101 SYS ; inline
-: .D     102 SYS ; inline
-: .H     103 SYS ; inline
-: FOPEN  104 SYS ; inline
-: FCLOSE 105 SYS ; inline
-: C,     106 SYS ; inline
-: ,      107 SYS ; inline
-: CREATE 108 SYS ; inline
-: FIND   109 SYS ; inline
-: (H)    110 SYS ; inline
-: (L)    111 SYS ; inline
-: (ST)   112 SYS ; inline
-: CELL   113 SYS ; inline
-: MEM    114 SYS ; inline
-: MEM-SZ 115 SYS ; inline
-
-: sp   32 EMIT ; inline
+: sp   32 EMIT ; INLINE
 : bye (ST) >A 999 !A ;
 : negate COM 1 + ;
 : - negate + ;

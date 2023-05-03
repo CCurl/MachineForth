@@ -22,7 +22,7 @@ typedef enum {
 
 typedef enum {
     EMIT=101, DOT10, DOT16, FOPEN, FCLOSE, CCOMMA, COMMA, 
-    CREATE, FIND, HA, LA, STA, CSZ, MEMST, MEMSZ
+    CREATE, FIND, HA, LA, STA, CSZ, MEMST, MEMSZ, IMM, INL
 } SYS_ops;
 
 typedef unsigned char byte;
@@ -65,25 +65,24 @@ int nextWord() {
     wd[l] = 0; return l;
 }
 
-int strLen(char *s1) {
+int strLen(const char *s1) {
     int l = 0;
     while (*s1) { ++l; ++s1; }
     return l;
 }
 
-int strEq(char *s1, char *s2) {
+int strEq(const char *s1, const char *s2) {
     while (*s1 || *s2) { if (*(s1++) != *(s2++)) { return 0; } }
     return (*s1 == *s2) ? 1 : 0;
 }
 
-void strCpy(char *s1, char *s2) {
+void strCpy(char *s1, const char *s2) {
     while (*s2) { *(s1++) = *(s2++); }
     (*s1) = 0;
 }
 
-void create(char *name) {
+void create(const char *name) {
     if (name == 0) { name = wd; nextWord(); }
-    // printf("-cr:%s-", name);
     int l = strLen(name);
     int sz = (CELL_SZ*2)+4+l;
     de_t *dp = (de_t*)(L-sz);
@@ -92,16 +91,13 @@ void create(char *name) {
     dp->f = 0;
     dp->l = l;
     strCpy(dp->name, name);
-    // printf("-nm:%s,%p-", dp->name, dp);
     L = (byte*)dp;
 }
 
-de_t *find(char *name) {
+de_t *find(const char *name) {
     if (name == 0) { name = wd; nextWord(); }
     de_t *dp = (de_t*)L;
-    // printf("-find:%s(%p)-\n", name, dp);
     while (dp < (de_t*)&MEMB(MEM_SZ)) {
-        // printf("-f?:%s-\n", dp->name);
         if (strEq(dp->name, name)) { return dp; }
         dp = (de_t*)dp->next;
     }
@@ -125,6 +121,8 @@ void sysOP(long op) {
         BCASE CSZ:    push(CELL_SZ);
         BCASE MEMST:  push((long)&mem[0]);
         BCASE MEMSZ:  push(MEM_SZ);
+        BCASE IMM:    { de_t *dp=(de_t*)L; dp->f = 2; }
+        BCASE INL:    { de_t *dp=(de_t*)L; dp->f = 4; }
         break; default: printf("-sysOP:%ld?-", op);
     }
 }
@@ -169,7 +167,7 @@ void run(byte *pc) {
     }
 }
 
-int parseNum(char *cp) {
+int parseNum(const char *cp) {
     long x = 0;
     while (BTW(*cp,'0','9')) {
         x = (x*10) + (*(cp++)-'0');
@@ -179,8 +177,7 @@ int parseNum(char *cp) {
     return 1;
 }
 
-int isNum(char *cp) {
-    // printf("-num:%s?-\n",cp);
+int isNum(const char *cp) {
     if (parseNum(cp)) {
         CComma(LIT); Comma(pop());
         return 1;
@@ -188,7 +185,7 @@ int isNum(char *cp) {
     return 0;
 }
 
-int isML(char *cp) {
+int isML(const char *cp) {
     if (!strEq(cp, "-ML-")) { return 0; }
     create(0);
     while (nextWord()) {
@@ -199,8 +196,7 @@ int isML(char *cp) {
     return 1;
 }
 
-int isWord(char *cp) {
-    // printf("-word:%s?-\n",cp);
+int isWord(const char *cp) {
     de_t *dp = find(cp);
     if (!dp) { return 0; }
     if (dp->f & 0x02) { run((byte*)dp->xt); }  // immediate
@@ -215,10 +211,9 @@ int isWord(char *cp) {
 int parse(const char *cp) {
     in = (char*)cp;
     while (nextWord()) {
-        //printf("-re:%s-",wd);
-        if (isML(wd)) { continue; }
         if (isNum(wd)) { continue; }
         if (isWord(wd)) { continue; }
+        if (isML(wd)) { continue; }
         printf("-%s?-\n",wd);
         return 0;
     }
@@ -236,9 +231,8 @@ char *getInput() {
     return tib;
 }
 
-void repl(char *cp) {
+void repl(const char *cp) {
     byte *cH=H, *cL=L;
-    if (cp == 0) { cp = getInput(); }
     if (parse(cp) == 0) { H=cH; return; }
     if (cL == L) { CComma(RET); H=cH; run(H); }
 }
@@ -252,6 +246,9 @@ int main(int argc, char **argv) {
         if (input_fp) { printf("Cannot open: %s\n", argv[1]); }
     }
     if (!input_fp) { input_fp = (long)fopen("mf.f","rb"); }
-    while (st != 999) { repl(0); }
+    parse("-ML- IMMEDIATE 8 116 7 1 -X-");
+    repl("IMMEDIATE");
+    parse("-ML- INLINE 8 117 7 1 -X- IMMEDIATE");
+    while (st != 999) { repl(getInput()); }
     return 0;
 }
