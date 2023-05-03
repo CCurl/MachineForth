@@ -138,7 +138,7 @@ From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
                      of logically exclusively-oring them together
    21   AND      remove the top two items from the data stack and replace them with the result
                      of logically and-ing them together
-   22   U22      MuP21 unused
+   22   U22      MuP21 unused (MF: unused)
    23   +        remove the top two items from the data stack and replace them with the result
                      of adding them together
    24   POP      move one item from the return stack to the data stack
