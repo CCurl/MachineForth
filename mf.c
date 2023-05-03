@@ -100,7 +100,7 @@ de_t *find(char *name) {
     if (name == 0) { name = wd; nextWord(); }
     de_t *dp = (de_t*)L;
     // printf("-find:%s(%p)-\n", name, dp);
-    while (dp < (de_t*)&MEMB(MEM_SZ*CELL_SZ)) {
+    while (dp < (de_t*)&MEMB(MEM_SZ)) {
         // printf("-f?:%s-\n", dp->name);
         if (strEq(dp->name, name)) { return dp; }
         dp = (de_t*)dp->next;
@@ -200,7 +200,7 @@ int isML(char *cp) {
 }
 
 int isWord(char *cp) {
-    //printf("-word:%s?-\n",cp);
+    // printf("-word:%s?-\n",cp);
     de_t *dp = find(cp);
     if (!dp) { return 0; }
     if (dp->f & 0x02) { run((byte*)dp->xt); }  // immediate
@@ -219,7 +219,7 @@ int parse(const char *cp) {
         if (isML(wd)) { continue; }
         if (isNum(wd)) { continue; }
         if (isWord(wd)) { continue; }
-        printf("-%s?-",wd);
+        printf("-%s?-\n",wd);
         return 0;
     }
     return 1;
