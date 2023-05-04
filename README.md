@@ -2,35 +2,22 @@
 
 MF is a Machine-Forth like system based on the MuP21 opcodes, with some liberties taken.
 
+MF is minimal to the extreme; it is implemented in one source file of about 250 lines of C code.
+
 Some obvious differences between MachineForth and MF:
 - Machine Forth uses 20-bit cells, MF uses 32-bit cells
-- Machine Forth only supports word addressing, MF supports both word and byte addressing
-- Machine Forth packs 4 5-bit instructions into one word, in MF each instruction is 1 byte
-- MF uses MuP21 opcodes that are not used: 5, 6, 7, 8, 12, and 14.
-
-## Building MF
-### Windows:
-- There is a Visual Studio solution file, mf.sln
-- For 32-bit, make the typedef for cell_t int32_t
-- For 64-bit, make the typedef for cell_t int64_t
-- NOTE: the 64-bit build generates warnings about format strings, but they are not a problem
-
-### Linux:
-- There is a simple ./make script
-- It builds mf (32-bit) and mf64 (64-bit)
-- It uses clang, but gcc should work too
-- Make the typedef for cell_t long
-- clang automatically interprets longs as 64-bit when -m64 is specified
-- clang automatically interprets longs as 32-bit when -m32 is specified
+- Machine Forth only supports cell addressing, MF supports both cell and byte addressing
+- Machine Forth packs 4 5-bit instructions into one cell, in MF each instruction is 1 byte
+- MF uses some of the unused MuP21 opcodes: 5, 6, 7, 8, 12, and 14
 
 ## MF Process Flow
 The process flow in MF is very simple and minimal. "H" is the "here pointer", and "L" is the "last pointer".
 
-The input source is always compiled. This is why some words are IMMEDIATE in MF.
-
-In repl(), at the end of each line:
-- If "L" didn't change, reset "H" back to its initial value and execute what was compiled.
-- Othewise, "L" changed, meaning a word was created, so don't execute.
+The input source line is always compiled, and then executed if no words were defined.
+- This is why some words are IMMEDIATE in MF, where they would not be in a "normal" Forth.
+- In repl(), at the end of each line:
+    - If "L" didn't change, reset "H" back to its initial value and execute what was compiled.
+    - Othewise, "L" changed, meaning a word was created, so don't execute.
 
 Here is the relevant code:
 ```
@@ -114,6 +101,23 @@ These 2 words, along with "Machine Language" mode, can be used to define words:
 
 : bye (ST) >A 999 !A ;
 ```
+## Building MF
+### Windows:
+- There is a Visual Studio solution file, mf.sln
+- Visual Studio always interprets "long" as 32-bit
+- For 32-bit (x86), the typedef for cell_t should be "long" or "int32_t"
+- For 64-bit (x64), set the typedef for cell_t to "int64_t"
+- NOTE: the 64-bit build generates warnings about format strings, but they are not a problem
+
+### Linux:
+- There is a simple ./make script
+- It builds mf (32-bit) and mf64 (64-bit)
+- It uses clang, but gcc should work too
+- The typedef for cell_t can be left as "long"
+- clang automatically interprets long as 64-bit when -m64 is specified
+- clang automatically interprets long as 32-bit when -m32 is specified
+- But if you want, you can be more explicit and use "int32_t" or "int64_t"
+
 ## MF Reference
 From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
 ```
@@ -171,20 +175,20 @@ System operations
    CODE Name     Function
    ---- -------- ----------------------------
    101  EMIT     output 1 character (n--)
-   102  .D       print 1 number in base 10
-   103  .H       print 1 number in base 16
-   104  FOPEN    open file (nm md-fh)
+   102  .D       print 1 number in base 10 (n--)
+   103  .H       print 1 number in base 16 (n--)
+   104  FOPEN    open file (nm md--fh)
    105  FCLOSE   close file (fh--)
    106  C,       standard Forth c, (b--)
    107  ,        standard Forth ,  (n--)
    108  CREATE   puts the next word into the dictionary (--)
-   109  FIND     search for the next word in the dictionary (--dp)
+   109  FIND     search for the next word in the dictionary (--dp|0)
    100  (H)      address of H (HERE) (--a)
    111  (L)      address of L (LAST) (--a)
    112  (ST)     address of ST (STATE) (--a)
    113  CELL     size of a CELL (--n)
-   114  MEM      address of the beginning of MF's memory
-   115  MEM-SZ   size in bytes of MF's memory
-   116  IMM      mark the most recent WORD as IMMEDIATE
-   117  INL      mark the most recent WORD as INLINE
+   114  MEM      address of the beginning of MF's memory (--a)
+   115  MEM-SZ   size in bytes of MF's memory (--n)
+   116  IMM      mark the most recent WORD as IMMEDIATE (--)
+   117  INL      mark the most recent WORD as INLINE (--)
 ```
