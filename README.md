@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     parse("-ML- IMMEDIATE 8 116 7 1 -X-");
     repl("IMMEDIATE");
     parse("-ML- INLINE 8 117 7 1 -X- IMMEDIATE");
-    while (st != 999) { repl(getInput()); }
+    while (ST != 999) { repl(getInput()); }
     return 0;
 }
 ```
