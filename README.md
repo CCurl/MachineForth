@@ -119,19 +119,19 @@ These 2 words, along with "Machine Language" mode, can be used to define words:
 - But if you want, you can be more explicit and use "int32_t" or "int64_t"
 
 ## MF Reference
-From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
+- MF Opcodes. These are similar to the MuP21 opcodes.
+- See this for more information:
+
+http://www.ultratechnology.com/p21fchp9.html (chapter 9)
 ```
    CODE Name     Function
    ---- -------- ----------------------------
-   00   JUMP     jump to 10 bit address in the lower 10 bits of the current word.
-                     (MuP21: Must be the first or second instruction in a word)
-   01   ;'       subroutine return. Pop the address from the top of the return stack
-                     and jump to it.
-   02   T=0      jump if T == 0
-   03   T<>0     MuP21: jump if carry is set (MF: jump if T != 0)
-   04   CALL     subroutine call. Push the address of the next location in memory to the 
-                     return stack, and jump to the 10 bit address in the lower 10 bits of 
-                     the current word.
+   00   JUMP     jump to the address in the next CELL
+   01   ;        subroutine return. Pop the address from the the return stack and jump to it
+   02   T=0      if T=0, jump to the address in the next CELL
+   03   A>0      if A>0, decrement A and jump to the address in the next CELL
+   04   CALL     subroutine call. Push the address just past the next CELL onto the 
+                     return stack, and jump to the address in the next CELL
    05   !AC      MuP21 unused (MF: used for !AC)
    06   @AC      MuP21 unused (MF: used for @AC)
    07   SYS      MuP21 unused (MF: used for SysOP)
@@ -157,7 +157,7 @@ From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
                      of logically exclusively-oring them together
    21   AND      remove the top two items from the data stack and replace them with the result
                      of logically and-ing them together
-   22   U22      MuP21 unused (MF: unused)
+   22   INC      MuP21 unused (MF: 1+)
    23   +        remove the top two items from the data stack and replace them with the result
                      of adding them together
    24   POP      move one item from the return stack to the data stack
@@ -170,7 +170,7 @@ From: http://www.ultratechnology.com/p21fchp9.html (chapter 9)
    31   DROP     discard the item on the top of the data stack
 ```
 
-System operations
+MF System operations
 ```
    CODE Name     Function
    ---- -------- ----------------------------
