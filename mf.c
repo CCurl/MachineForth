@@ -22,7 +22,8 @@ typedef enum {
 
 typedef enum {
     EMIT=101, DOT10, DOT16, FOPEN, FCLOSE, CCOMMA, COMMA, 
-    CREATE, FIND, HA, LA, STA, CSZ, MEMST, MEMSZ, IMM, INL
+    CREATE, FIND, HA, LA, STA, CSZ, MEMST, MEMSZ, IMM, INL,
+    SEQ, SLEN, SCPY, NXTWD
 } SYS_ops;
 
 typedef unsigned char byte;
@@ -35,10 +36,10 @@ char tib[128], wd[32], *in = &tib[0];
 byte *H, *L, mem[MEM_SZ];
 
 void push(cell_t x) { stk[++sp] = x; }
-cell_t pop() { return stk[sp--]; }
+cell_t pop() { return (0<sp) ? stk[sp--] : 0; }
 
 void rpush(cell_t x) { rstk[++rsp] = x; }
-cell_t rpop() { return rstk[rsp--]; }
+cell_t rpop() { return (0<rsp) ? rstk[rsp--] : 0; }
 
 #ifndef NEEDS_ALIGN
     cell_t GetNumAt(byte *a) { return *(cell_t*)a; }
@@ -124,6 +125,10 @@ void sysOP(cell_t op) {
         BCASE MEMSZ:  push(MEM_SZ);
         BCASE IMM:    { de_t *dp=(de_t*)L; dp->f = 2; }
         BCASE INL:    { de_t *dp=(de_t*)L; dp->f = 4; }
+        BCASE SEQ:    t=pop(); S0=strEq((char *)S0, (char*)t);
+        BCASE SLEN:   S0=strLen((char*)S0);
+        BCASE SCPY:   t=pop(); n=pop(); strCpy((char*)t, (char*)n);
+        BCASE NXTWD:  nextWord(); push((cell_t)wd);
         break; default: printf("-sysOP:%ld?-", op);
     }
 }
@@ -133,7 +138,7 @@ void run(byte *pc) {
     // printf("-pc/ir:%p/%d-\n",pc,*(pc));
     switch(*(pc++)) {
         case  JUMP: pc = (byte*)GetNumAt(pc); 
-        NCASE RET: if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
+        NCASE RET:   if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
         NCASE JMPT0: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE JMPT1: if (S0 != 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE CALL: rpush((cell_t)pc+CELL_SZ); pc = (byte*)GetNumAt(pc);
@@ -222,6 +227,7 @@ int parse(const char *cp) {
 }
 
 char *getInput() {
+    if (sp<1) { sp=0; }
     FILE *fp = input_fp ? (FILE*)input_fp : stdin;
     if (fp == stdin) { printf(" ok\n"); }
     if (tib != fgets(tib, sizeof(tib), fp)) {
