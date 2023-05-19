@@ -136,18 +136,16 @@ http://www.ultratechnology.com/p21fchp9.html (chapter 9)
    06   @AC      MuP21 unused (MF: used for @AC)
    07   SYS      MuP21 unused (MF: used for SysOP)
    08   LIT1     MuP21 unused (MF: used for LIT1)
-   09   @A+      fetch a value from memory pointed to by the A register, place it on the top of
-                    the data stack, and increment A
-   10   LIT      fetch the next cell from memory as a literal and place it on the top of the
-                     data stack
-   11   @A       fetch a value from memory pointed to by the A register, place it on the top of
-                    the data stack, and increment A 
+   09   @A+      fetch the value from memory pointed to by the A register, push it onto the data stack,
+                    and increment A
+   10   LIT      fetch the next cell from memory as a literal and push place it onto the data stack
+   11   @A       fetch the value from memory pointed to by the A register, and push it onto the data stack.
    12   !        MuP21 unused (MF: used for !)
-   13   !A+      remove the item in the top of data stack and store it into memory pointed 
-                     to by the A register, increment A
+   13   !A+      remove the item from the top of data stack and store it in the memory pointed 
+                    to by the A register, increment A
    14   @        MuP21 unused (MF: used for @)
-   15   !A       remove the item in the top of data stack and store it into 
-                     memory pointed to by the A register
+   15   !A       remove the item in the top of data stack and store it in the memory pointed
+                    to by the A register
    16   COM      complement all bits in T (top of data stack)
    17   2*       shift T left 1 bit (the bottom bit becomes 0)
    18   2/       shift T right 1 bit (the top bit remains unchanged)
