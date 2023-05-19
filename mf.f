@@ -1,7 +1,7 @@
 -ML- JMP    8  0  1 -X-  
 -ML- ;         1  1 -X-  INLINE
 -ML- T=0    8  2  1 -X-  
--ML- T<>0   8  3  1 -X-  
+-ML- A>0    8  3  1 -X-  
 -ML- CALL   8  4  1 -X-  
 -ML- !AC       5  1 -X-  INLINE
 -ML- @AC       6  1 -X-  INLINE
@@ -20,7 +20,7 @@
 -ML- +*       19  1 -X-  INLINE
 -ML- XOR      20  1 -X-  INLINE
 -ML- AND      21  1 -X-  INLINE
--ML- U22      22  1 -X-  INLINE
+-ML- 1+       22  1 -X-  INLINE
 -ML- +        23  1 -X-  INLINE
 -ML- R>       24  1 -X-  INLINE
 -ML- A        25  1 -X-  INLINE
@@ -57,16 +57,26 @@
 
 : sp   32 EMIT ; INLINE
 : bye (ST) >A 999 !A ;
-: negate COM 1 + ;
-: - negate + ;
+: negate COM 1+ ; INLINE
+: - negate + ; INLINE
 : .d .D sp ;
 : .h .H sp ;
 
 : H (H) @ ; : L (L) @ ;
 : SWAP >R >A R> A ; INLINE
 
-: if T=0 C, H 0 , ; IMMEDIATE
+: -if T=0 C, H 0 , ; IMMEDIATE
+: else JMP C, H SWAP 0 , H SWAP ! ; IMMEDIATE
 : then H SWAP ! ; IMMEDIATE
+
+: begin  H ; IMMEDIATE
+: again  JMP C, , ; IMMEDIATE
+: -until T=0 C, , ; IMMEDIATE
+: -while T=0 C, H 0 , ; IMMEDIATE
+: repeat JMP C, SWAP , H SWAP ! ; IMMEDIATE
+
+: for 29 C, H ; IMMEDIATE
+: next A>0 C, , ; IMMEDIATE
 
 H MEM - .d 
 MEM MEM-SZ + L - .d

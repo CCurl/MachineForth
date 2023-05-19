@@ -14,9 +14,9 @@
 #define BTW(n,l,h) ((l<=n)&(n<=h))
 
 typedef enum {
-    JUMP=0, RET, JMPT0, JMPT1, CALL, ACSTORE, ACAT, SYS,
+    JUMP=0, RET, JMPT0, JMPA, CALL, ACSTORE, ACAT, SYS,
     LIT1, AATINC, LIT, AAT, STORE, ASTOREINC, FETCH, ASTORE,
-    COM, TIMES2, DIV2, ADDMULT, XOR, AND, U22, ADD,
+    COM, TIMES2, DIV2, ADDMULT, XOR, AND, INC, ADD,
     POPR, AVALUE, DUP, OVER, PUSHR, TOA, NOP, DROP
 } MF_ops;
 
@@ -140,7 +140,7 @@ void run(byte *pc) {
         case  JUMP: pc = (byte*)GetNumAt(pc); 
         NCASE RET:   if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
         NCASE JMPT0: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE JMPT1: if (S0 != 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE JMPA:  if (0 < A--) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE CALL: rpush((cell_t)pc+CELL_SZ); pc = (byte*)GetNumAt(pc);
         NCASE ACSTORE: *(byte*)A = (byte)pop();         // NON-standard, AC! 
         NCASE ACAT: push(*(byte*)A);                    // NON-standard, AC@
@@ -159,7 +159,7 @@ void run(byte *pc) {
         NCASE ADDMULT: if (S0 & 0x01) { S0 += S1; }
         NCASE XOR: t=pop(); S0 ^= t;
         NCASE AND: t=pop(); S0 &= t;
-        NCASE U22:                                      // Unused
+        NCASE INC: S0++;                                 // Unused
         NCASE ADD: t=pop(); S0 += t;
         NCASE POPR: push(rpop());
         NCASE AVALUE: push(A);
@@ -168,7 +168,7 @@ void run(byte *pc) {
         NCASE PUSHR: rpush(pop());
         NCASE TOA: A = pop();
         NCASE NOP: // NOP
-        NCASE DROP: sp = (0<sp) ? sp-1: 0;
+        NCASE DROP: sp = (0<sp) ? sp-1: 0;     goto next;
         default: printf("-ir:%u?-",*(pc-1)); return;
     }
 }
