@@ -8,7 +8,7 @@ Some obvious differences between MachineForth and MF:
 - Machine Forth uses 20-bit cells, MF uses 32-bit cells
 - Machine Forth only supports cell addressing, MF supports both cell and byte addressing
 - Machine Forth packs 4 5-bit instructions into one cell, in MF each instruction is 1 byte
-- MF uses some of the unused MuP21 opcodes: 5, 6, 7, 8, 12, and 14
+- MF uses some of the unused MuP21 opcodes: 5, 6, 7, 8, 12, 14, and 22
 
 ## MF Process Flow
 The process flow in MF is very simple and minimal. "H" is the "here pointer", and "L" is the "last pointer".
@@ -132,30 +132,27 @@ http://www.ultratechnology.com/p21fchp9.html (chapter 9)
    03   A>0      if A>0, decrement A and jump to the address in the next CELL
    04   CALL     subroutine call. Push the address just past the next CELL onto the 
                      return stack, and jump to the address in the next CELL
-   05   !AC      MuP21 unused (MF: used for !AC)
-   06   @AC      MuP21 unused (MF: used for @AC)
-   07   SYS      MuP21 unused (MF: used for SysOP)
-   08   LIT1     MuP21 unused (MF: used for LIT1)
-   09   @A+      fetch the value from memory pointed to by the A register, push it onto the data stack,
-                    and increment A
-   10   LIT      fetch the next cell from memory as a literal and push place it onto the data stack
-   11   @A       fetch the value from memory pointed to by the A register, and push it onto the data stack.
-   12   !        MuP21 unused (MF: used for !)
-   13   !A+      remove the item from the top of data stack and store it in the memory pointed 
-                    to by the A register, increment A
-   14   @        MuP21 unused (MF: used for @)
-   15   !A       remove the item in the top of data stack and store it in the memory pointed
-                    to by the A register
-   16   COM      complement all bits in T (top of data stack)
-   17   2*       shift T left 1 bit (the bottom bit becomes 0)
-   18   2/       shift T right 1 bit (the top bit remains unchanged)
+   05   !AC      MuP21 unused (MF: used for !AC - pop BYTE TOS to address in A)
+   06   @AC      MuP21 unused (MF: used for @AC - push BYTE at address in A onto the data stack)
+   07   SYS      MuP21 unused (MF: used for SysOP - execute TOS a system operation)
+   08   LIT1     MuP21 unused (MF: used for LIT1 - push the next BYTE onto the data stack)
+   09   @A+      fetch CELL at address A, push it onto the data stack, increment A
+   10   LIT      fetch the next CELL from memory as a literal and push it onto the data stack
+   11   @A       fetch the CELL from memory pointed to by the A register, and push it onto the data stack.
+   12   !        MuP21 unused (MF: used for ! - store NOS to address TOS)
+   13   !A+      store TOS to address A, increment A
+   14   @        MuP21 unused (MF: used for @ - fetch number at address TOS)
+   15   !A       store TOS to address A
+   16   COM      complement all bits in TOS (top of data stack)
+   17   2*       shift TOS left 1 bit (the bottom bit becomes 0)
+   18   2/       shift TOS right 1 bit (the top bit remains unchanged)
    19   +*       add the second item on the data stack to the top item without 
                      removing the second item, if the least signifigant bit of T is 1
    20   XOR      remove the top two items from the data stack and replace them with the result
                      of logically exclusively-oring them together
    21   AND      remove the top two items from the data stack and replace them with the result
                      of logically and-ing them together
-   22   INC      MuP21 unused (MF: 1+)
+   22   1+       MuP21 unused (MF: Increment TOS)
    23   +        remove the top two items from the data stack and replace them with the result
                      of adding them together
    24   POP      move one item from the return stack to the data stack
@@ -172,9 +169,9 @@ MF System operations
 ```
    CODE Name     Function
    ---- -------- ----------------------------
-   101  EMIT     output 1 character (n--)
-   102  .D       print 1 number in base 10 (n--)
-   103  .H       print 1 number in base 16 (n--)
+   101  EMIT     output 1 BYTE (n--)
+   102  .D       print 1 CELL in base 10 (n--)
+   103  .H       print 1 CELL in base 16 (n--)
    104  FOPEN    open file (nm md--fh)
    105  FCLOSE   close file (fh--)
    106  C,       standard Forth c, (b--)
