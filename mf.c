@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <time.h>
 
 #define MEM_SZ      4*1024*1024
 #define STK_SZ      31
@@ -14,16 +15,16 @@
 #define BTW(n,l,h) ((l<=n)&(n<=h))
 
 typedef enum {
-    JUMP=0, RET, JMPT0, JMPA, CALL, ACSTORE, ACAT, SYS,
+    JUMP=0, RET, JMPZ, JMPNZ, CALL, ACSTORE, ACAT, SYS,
     LIT1, AATINC, LIT, AAT, STORE, ASTOREINC, FETCH, ASTORE,
-    COM, TIMES2, DIV2, ADDMULT, XOR, AND, INC, ADD,
-    POPR, AVALUE, DUP, OVER, PUSHR, TOA, NOP, DROP
+    COM, TIMES2, DIV2, ADDMULT, XOR, AND, DEC, ADD,
+    POPR, AVALUE, DUP, OVER, PUSHR, TOA, INC, DROP
 } MF_ops;
 
 typedef enum {
     EMIT=101, DOT10, DOT16, FOPEN, FCLOSE, CCOMMA, COMMA, 
     CREATE, FIND, HA, LA, STA, CSZ, MEMST, MEMSZ, IMM, INL,
-    SEQ, SLEN, SCPY, NXTWD
+    SEQ, SLEN, SCPY, NXTWD, CLK
 } SYS_ops;
 
 typedef unsigned char byte;
@@ -73,7 +74,14 @@ int strLen(const char *s1) {
     return l;
 }
 
-int strEq(const char *s1, const char *s2) {
+int lower(char c) { return BTW(c,'A','Z') ? c+32 : c; }
+
+int strEqI(const char* s1, const char* s2) {
+    while (*s1 || *s2) { if (lower(*(s1++)) != lower(*(s2++))) { return 0; } }
+    return (*s1 == *s2) ? 1 : 0;
+}
+
+int strEq(const char* s1, const char* s2) {
     while (*s1 || *s2) { if (*(s1++) != *(s2++)) { return 0; } }
     return (*s1 == *s2) ? 1 : 0;
 }
@@ -100,7 +108,7 @@ de_t *find(const char *name) {
     if (name == 0) { name = wd; nextWord(); }
     de_t *dp = (de_t*)L;
     while (dp < (de_t*)&MEMB(MEM_SZ)) {
-        if (strEq(dp->name, name)) { return dp; }
+        if (strEqI(dp->name, name)) { return dp; }
         dp = (de_t*)dp->next;
     }
     return 0;
@@ -129,6 +137,7 @@ void sysOP(cell_t op) {
         BCASE SLEN:   S0=strLen((char*)S0);
         BCASE SCPY:   t=pop(); n=pop(); strCpy((char*)t, (char*)n);
         BCASE NXTWD:  nextWord(); push((cell_t)wd);
+        BCASE CLK : push(clock());
         break; default: printf("-sysOP:%ld?-", op);
     }
 }
@@ -139,8 +148,8 @@ void run(byte *pc) {
     switch(*(pc++)) {
         case  JUMP: pc = (byte*)GetNumAt(pc); 
         NCASE RET:   if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
-        NCASE JMPT0: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE JMPA:  if (0 < A--) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE JMPZ: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE JMPNZ: if (S0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE CALL: rpush((cell_t)pc+CELL_SZ); pc = (byte*)GetNumAt(pc);
         NCASE ACSTORE: *(byte*)A = (byte)pop();         // NON-standard, AC! 
         NCASE ACAT: push(*(byte*)A);                    // NON-standard, AC@
@@ -159,7 +168,7 @@ void run(byte *pc) {
         NCASE ADDMULT: if (S0 & 0x01) { S0 += S1; }
         NCASE XOR: t=pop(); S0 ^= t;
         NCASE AND: t=pop(); S0 &= t;
-        NCASE INC: S0++;                                 // Unused
+        NCASE DEC : S0--;                                // Unused
         NCASE ADD: t=pop(); S0 += t;
         NCASE POPR: push(rpop());
         NCASE AVALUE: push(A);
@@ -167,8 +176,8 @@ void run(byte *pc) {
         NCASE OVER: t=S1; push(t);
         NCASE PUSHR: rpush(pop());
         NCASE TOA: A = pop();
-        NCASE NOP: // NOP
-        NCASE DROP: sp = (0<sp) ? sp-1: 0;     goto next;
+        NCASE INC : S0++;
+        NCASE DROP: sp = (0<sp) ? sp-1: 0;   goto next;
         default: printf("-ir:%u?-",*(pc-1)); return;
     }
 }
