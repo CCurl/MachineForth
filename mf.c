@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <time.h>
 
-#define MEM_SZ      4*1024*1024
-#define STK_SZ      31
+#define MEM_SZ      1*1024*1024
+#define STK_SZ      63
 
 #define BCASE       break; case
 #define NCASE       goto next; case
@@ -137,7 +137,7 @@ void sysOP(cell_t op) {
         BCASE SLEN:   S0=strLen((char*)S0);
         BCASE SCPY:   t=pop(); n=pop(); strCpy((char*)t, (char*)n);
         BCASE NXTWD:  nextWord(); push((cell_t)wd);
-        BCASE CLK : push(clock());
+        BCASE CLK:    push(clock());
         break; default: printf("-sysOP:%ld?-", op);
     }
 }
@@ -240,6 +240,7 @@ char *getInput() {
     FILE *fp = input_fp ? (FILE*)input_fp : stdin;
     if (fp == stdin) { printf(" ok\n"); }
     if (tib != fgets(tib, sizeof(tib), fp)) {
+        if (fp == stdin) { ST = 999; }
         fclose(fp);
         input_fp=0;
         tib[0]=0;
@@ -261,10 +262,10 @@ int main(int argc, char **argv) {
         input_fp = (cell_t)fopen(argv[1],"rb");
         if (input_fp) { printf("Cannot open: %s\n", argv[1]); }
     }
-    if (!input_fp) { input_fp = (cell_t)fopen("mf.f","rb"); }
     parse("-ML- IMMEDIATE 8 116 7 1 -X-");
     repl("IMMEDIATE");
     parse("-ML- INLINE 8 117 7 1 -X- IMMEDIATE");
+    if (!input_fp) { input_fp = (cell_t)fopen("mf.f","rb"); }
     while (ST != 999) { repl(getInput()); }
     return 0;
 }

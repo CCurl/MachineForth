@@ -62,7 +62,7 @@
 : bye (ST) >A 999 !A ;
 : negate COM 1 + ;
 : - negate + ;
-: .d .10 sp ;
+: . .10 sp ;
 : .h .16 sp ;
 
 : H (H) @ ; : L (L) @ ;
@@ -77,6 +77,8 @@
 : until T=0  C, , ; IMMEDIATE
 : again JMP  C, , ; IMMEDIATE
 
-H MEM - .d 
-MEM MEM-SZ + L - .d
-L H - .d
+: type >a begin @ac if emit else drop exit then a 1+ >a again ;
+
+H MEM - .
+MEM MEM-SZ + L - .
+L H - .
