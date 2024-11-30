@@ -121,6 +121,8 @@ These 2 words, along with "Machine Language" mode, can be used to define words:
 ## MF Reference
 - MF Opcodes. These are similar to the MuP21 opcodes.
 - See this for more information:
+- T: The top of the stack
+- N: The second item on the stack
 
 http://www.ultratechnology.com/p21fchp9.html (chapter 9)
 ```
@@ -130,14 +132,14 @@ http://www.ultratechnology.com/p21fchp9.html (chapter 9)
                      (MuP21: Must be the first or second instruction in a word)
    01   ;        subroutine return. Pop the address from the top of the return stack
                      and jump to it.
-   02   T=0      jump if T == 0
-   03   T!=0     MuP21: jump if carry is set (MF: jump if T != 0)
+   02   T=0      jump if T = 0
+   03   T<0      MuP21: jump if carry is set (MF: jump if T < 0)
    04   CALL     subroutine call. Push the address of the next location in memory to the 
                      return stack, and jump to the address at (PC).
-   05   !AC      MuP21 unused (MF: used for !AC)
-   06   @AC      MuP21 unused (MF: used for @AC)
-   07   SYS      MuP21 unused (MF: used for SysOP)
-   08   LIT1     MuP21 unused (MF: used for LIT1)
+   05   !AC      MuP21: unused (MF: used for !AC)
+   06   @AC      MuP21: unused (MF: used for @AC)
+   07   SYS      MuP21: unused (MF: used for SysOP)
+   08   LIT1     MuP21: unused (MF: used for LIT1)
    09   @A+      fetch a value from memory pointed to by the A register, place it on the top of
                     the data stack, and increment A
    10   LIT      fetch the next cell from memory as a literal and place it on the top of the
@@ -147,28 +149,27 @@ http://www.ultratechnology.com/p21fchp9.html (chapter 9)
    12   !        MuP21 unused (MF: used for !)
    13   !A+      remove the item in the top of data stack and store it into memory pointed 
                      to by the A register, increment A
-   14   @        MuP21 unused (MF: used for @)
+   14   @        MuP21: unused (MF: used for @)
    15   !A       remove the item in the top of data stack and store it into 
                      memory pointed to by the A register
-   16   COM      complement all bits in T (top of data stack)
+   16   COM      complement all bits in T
    17   2*       shift T left 1 bit (the bottom bit becomes 0)
    18   2/       shift T right 1 bit (the top bit remains unchanged)
-   19   +*       add the second item on the data stack to the top item without 
-                     removing the second item, if the least signifigant bit of T is 1
+   19   +*       Mup21: add/mult (MF: '*' replace T and N with the product of T*N)
    20   XOR      remove the top two items from the data stack and replace them with the result
                      of logically exclusively-oring them together
    21   AND      remove the top two items from the data stack and replace them with the result
                      of logically and-ing them together
-   22   1-       MuP21 unused (MF: Decrement T)
+   22   1-       MuP21: unused (MF: Decrement T)
    23   +        remove the top two items from the data stack and replace them with the result
                      of adding them together
-   24   POP      move one item from the return stack to the data stack
+   24   POP      move one item from the return stack to the data stack (R>)
    25   A        copy the contents of the A register to the top of stack
    26   DUP      copy the top of stack to the top of stack
    27   OVER     copy the second item on the data stack and make it the new top of the data stack
-   28   PUSH     move one item from the data stack to the return stack
+   28   PUSH     move one item from the data stack to the return stack (>R)
    29   >A       move the top of stack to the A register
-   30   1+       MuP21 no-operation (MF: Increment T)
+   30   1+       MuP21: no-op (MF: Increment T)
    31   DROP     discard the item on the top of the data stack
 ```
 

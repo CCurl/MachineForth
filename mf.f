@@ -2,7 +2,7 @@
 -ML- ;         1  1 -X-  INLINE
 -ML- EXIT      1  1 -X-  INLINE
 -ML- T=0    8  2  1 -X-  
--ML- T!=0   8  3  1 -X-  
+-ML- T<0    8  3  1 -X-  
 -ML- CALL   8  4  1 -X-  
 -ML- !AC       5  1 -X-  INLINE
 -ML- @AC       6  1 -X-  INLINE
@@ -18,7 +18,7 @@
 -ML- COM      16  1 -X-  INLINE
 -ML- 2*       17  1 -X-  INLINE
 -ML- 2/       18  1 -X-  INLINE
--ML- +*       19  1 -X-  INLINE
+-ML- *        19  1 -X-  INLINE
 -ML- XOR      20  1 -X-  INLINE
 -ML- AND      21  1 -X-  INLINE
 -ML- 1-       22  1 -X-  INLINE
@@ -43,7 +43,7 @@
 : C,     106 SYS ; INLINE
 : ,      107 SYS ; INLINE
 : CREATE 108 SYS ; INLINE
-: FIND   109 SYS ; INLINE
+: FIND   109 SYS ; IMMEDIATE
 : (H)    110 SYS ; INLINE
 : (L)    111 SYS ; INLINE
 : (ST)   112 SYS ; INLINE
@@ -58,27 +58,37 @@
 : NXTWD  121 SYS ; INLINE
 : CLOCK  122 SYS ; INLINE
 
-: sp   32 EMIT ; INLINE
-: bye (ST) >A 999 !A ;
-: negate COM 1 + ;
-: - negate + ;
-: . .10 sp ;
-: .h .16 sp ;
-
+: a>r a >r ; inline
+: r>a r> >a ; inline
 : H (H) @ ; : L (L) @ ;
-: SWAP >R >A R> A ; INLINE
+: swap a>r >R >A R> A r>a ; INLINE
 
 : if T=0 C, H 0 , ; IMMEDIATE
+: -if T<0 C, H 0 , ; IMMEDIATE
 : else JMP C, H SWAP 0 , H SWAP ! ; IMMEDIATE
 : then H SWAP ! ; IMMEDIATE
 
 : begin H ; IMMEDIATE
-: while T!=0 C, , ; IMMEDIATE
 : until T=0  C, , ; IMMEDIATE
 : again JMP  C, , ; IMMEDIATE
 
-: type >a begin @ac if emit else drop exit then a 1+ >a again ;
+: sp   32 EMIT ;
+: cr   13 emit 10 emit ;
+: bye (ST) >A 999 !A ;
+: negate COM 1 + ;
+: - negate + ;
+: . .10 sp ;
+: .hex .16 sp ;
+: type a>r >a begin @ac if emit else drop r>a exit then a 1+ >a again ;
+: = - if dup xor else 1- then ;
+: < - -if 1- else dup xor then ;
+: > swap - < ;
 
-H MEM - .
-MEM MEM-SZ + L - .
-L H - .
+H MEM - .   MEM MEM-SZ + L - .   L H - . cr
+2 3 * . cr 
+2 3 > . cr
+3 3 = . cr
+
+: .word cell 2* + 2 + type ;
+FIND type if .word else . then cr
+FIND NONONO if .word else . then cr

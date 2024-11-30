@@ -15,9 +15,9 @@
 #define BTW(n,l,h) ((l<=n)&(n<=h))
 
 typedef enum {
-    JUMP=0, RET, JMPZ, JMPNZ, CALL, ACSTORE, ACAT, SYS,
+    JUMP=0, RET, JMPZ, JMPL0, CALL, ACSTORE, ACAT, SYS,
     LIT1, AATINC, LIT, AAT, STORE, ASTOREINC, FETCH, ASTORE,
-    COM, TIMES2, DIV2, ADDMULT, XOR, AND, DEC, ADD,
+    COM, TIMES2, DIV2, MULT, XOR, AND, DEC, ADD,
     POPR, AVALUE, DUP, OVER, PUSHR, TOA, INC, DROP
 } MF_ops;
 
@@ -37,10 +37,10 @@ char tib[128], wd[32], *in = &tib[0];
 byte *H, *L, mem[MEM_SZ+1];
 
 void push(cell_t x) { stk[++sp] = x; }
-cell_t pop() { return (0<sp) ? stk[sp--] : 0; }
+cell_t pop() { return (0 < sp) ? stk[sp--] : 0; }
 
 void rpush(cell_t x) { rstk[++rsp] = x; }
-cell_t rpop() { return (0<rsp) ? rstk[rsp--] : 0; }
+cell_t rpop() { return (0 < rsp) ? rstk[rsp--] : 0; }
 
 #define GetNumAt(a) *(cell_t*)a
 #define SetNumAt(a, v) *(cell_t*)a = v
@@ -81,13 +81,13 @@ void strCpy(char *s1, const char *s2) {
 void create(const char *name) {
     if (name == 0) { name = wd; nextWord(); }
     int l = strLen(name);
-    int sz = (CELL_SZ*2)+4+l;
+    int sz = (CELL_SZ*2)+3+l;  // 4 => 1 byte each for flags,len,NULL
     de_t *dp = (de_t*)(L-sz);
-    dp->next = (cell_t)L;
-    dp->xt = (cell_t)H;
-    dp->f = 0;
-    dp->l = l;
-    strCpy(dp->name, name);
+    dp->next = (cell_t)L;   // NEXT pointer
+    dp->xt = (cell_t)H;     // Execution Token
+    dp->f = 0;              // Flags (IMM=0x02, INL=0x04)
+    dp->l = l;              // Length
+    strCpy(dp->name, name); // Word name
     L = (byte*)dp;
 }
 
@@ -111,7 +111,7 @@ void sysOP(cell_t op) {
         BCASE CCOMMA: t=pop(); CComma(t);
         BCASE COMMA:  t=pop(); Comma(t);
         BCASE CREATE: create(0);
-        BCASE FIND:   find(0);
+        BCASE FIND:   push((cell_t)find(0));
         BCASE HA:     push((cell_t)&H);
         BCASE LA:     push((cell_t)&L);
         BCASE STA:    push((cell_t)&ST);
@@ -135,55 +135,60 @@ void run(byte *pc) {
     // printf("-pc/ir:%p/%d-\n",pc,*(pc));
     switch(*(pc++)) {
         case  JUMP: pc = (byte*)GetNumAt(pc); 
-        NCASE RET:   if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
+        NCASE RET:  if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
         NCASE JMPZ: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE JMPNZ: if (S0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE CALL: t=(cell_t)pc+CELL_SZ; if (t!=RET) { rpush((cell_t)pc+CELL_SZ); }
-                    pc = (byte*)GetNumAt(pc);
-        NCASE ACSTORE: *(byte*)A = (byte)pop();         // NON-standard, AC! 
-        NCASE ACAT: push(*(byte*)A);                    // NON-standard, AC@
+        NCASE JMPL0: if (S0 < 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE CALL: t=GetNumAt(pc); pc += CELL_SZ; if (*pc != RET) { rpush((cell_t)pc); }
+                    pc = (byte*)t;
+        NCASE ACSTORE: *(byte*)A = (byte)pop();         // NON-standard, !AC 
+        NCASE ACAT: push(*(byte*)A);                    // NON-standard, @AC
         NCASE SYS: sysOP(pop());                        // NON-standard
         NCASE LIT1: push(*(pc++));                      // NON-standard
-        NCASE AATINC: push(GetNumAt(A++));
-        NCASE LIT: push(GetNumAt(pc)); pc += CELL_SZ;
-        NCASE AAT: push(GetNumAt((byte*)A));
-        NCASE STORE: SetNumAt((byte*)S0,S1); sp-=2;      // NON-standard
-        NCASE ASTOREINC: SetNumAt((byte*)(A++),pop());
-        NCASE FETCH: S0 = GetNumAt((byte*)S0);           // NON-standard, FORTH @
-        NCASE ASTORE: SetNumAt((byte*)A, pop());
-        NCASE COM: S0 = ~S0;
-        NCASE TIMES2: S0 *= 2;
-        NCASE DIV2:   S0 /= 2;
-        NCASE ADDMULT: if (S0 & 0x01) { S0 += S1; }
-        NCASE XOR: t=pop(); S0 ^= t;
-        NCASE AND: t=pop(); S0 &= t;
-        NCASE DEC : S0--;                                // Unused
-        NCASE ADD: t=pop(); S0 += t;
-        NCASE POPR: push(rpop());
-        NCASE AVALUE: push(A);
-        NCASE DUP: t=S0; push(t);
-        NCASE OVER: t=S1; push(t);
-        NCASE PUSHR: rpush(pop());
-        NCASE TOA: A = pop();
-        NCASE INC : S0++;
-        NCASE DROP: sp = (0<sp) ? sp-1: 0;   goto next;
+        NCASE AATINC: push(GetNumAt(A++));              // @A+
+        NCASE LIT: push(GetNumAt(pc)); pc += CELL_SZ;   // Literal (CELL Sized)
+        NCASE AAT: push(GetNumAt((byte*)A));            // @A
+        NCASE STORE: SetNumAt((byte*)S0,S1); sp-=2;     // NON-standard, !
+        NCASE ASTOREINC: SetNumAt((byte*)(A++),pop());  // !A+
+        NCASE FETCH: S0 = GetNumAt((byte*)S0);          // NON-standard, FORTH @
+        NCASE ASTORE: SetNumAt((byte*)A, pop());        // !A
+        NCASE COM: S0 = ~S0;                            // COM
+        NCASE TIMES2: S0 *= 2;                          // 2+
+        NCASE DIV2: S0 /= 2;                            // 2/
+        NCASE MULT: t=pop(); S0 *= t;                   // NON-standard, FORTH *
+        NCASE XOR: t=pop(); S0 ^= t;                    // XOR
+        NCASE AND: t=pop(); S0 &= t;                    // AND
+        NCASE DEC: S0--;                                // Unused, FORTH 1-
+        NCASE ADD: t=pop(); S0 += t;                    // +
+        NCASE POPR: push(rpop());                       // R>
+        NCASE AVALUE: push(A);                          // A
+        NCASE DUP:  t=S0; push(t);                      // DUP
+        NCASE OVER: t=S1; push(t);                      // OVER
+        NCASE PUSHR: rpush(pop());                      // >R
+        NCASE TOA: A = pop();                           // >A
+        NCASE INC: S0++;                                // NON-standard, 1+
+        NCASE DROP: sp = (0<sp) ? sp-1: 0;              // DROP
+        goto next;
         default: printf("-ir:%u?-",*(pc-1)); return;
     }
 }
 
 int parseNum(const char *cp) {
     cell_t x = 0;
+    int isNeg = *cp == '-';
+    if (isNeg) { ++cp; }
+    if (*cp == 0) { return 0; }
     while (BTW(*cp,'0','9')) {
         x = (x*10) + (*(cp++)-'0');
     }
     if (*cp) return 0;
-    push(x);
+    push(isNeg ? -x : x);
     return 1;
 }
 
 int isNum(const char *cp) {
     if (parseNum(cp)) {
-        CComma(LIT); Comma(pop());
+        if (BTW(S0,0,127)) { CComma(LIT1); CComma(pop()); }
+        else { CComma(LIT); Comma(pop()); }
         return 1;
     }
     return 0;
@@ -215,8 +220,8 @@ int isWord(const char *cp) {
 int parse(const char *cp) {
     in = (char*)cp;
     while (nextWord()) {
-        if (isNum(wd)) { continue; }
         if (isWord(wd)) { continue; }
+        if (isNum(wd)) { continue; }
         if (isML(wd)) { continue; }
         printf("-%s?-\n",wd);
         return 0;
