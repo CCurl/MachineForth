@@ -1,5 +1,7 @@
 # MF  - Inspired by Chuck Moore's "Machine Forth" and the MuP21 processor.
 
+# NOTE - this was boen out of intellectual curiosity and was ever intended to be actually used by anyone.
+
 MF is a Machine-Forth like system based on the MuP21 opcodes, with some liberties taken.
 
 MF is minimal to the extreme; it is implemented in one source file of about 250 lines of C code.
