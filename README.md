@@ -1,6 +1,7 @@
-# MF  - Inspired by Chuck Moore's "Machine Forth" and the MuP21 processor.
+# NOTE - this was born out of intellectual curiosity and was ever intended to be actually used by anyone.
+As such, it was aborted a long time ago.
 
-# NOTE - this was boen out of intellectual curiosity and was ever intended to be actually used by anyone.
+## MF  - Inspired by Chuck Moore's "Machine Forth" and the MuP21 processor.
 
 MF is a Machine-Forth like system based on the MuP21 opcodes, with some liberties taken.
 
