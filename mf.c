@@ -8,8 +8,8 @@
 
 #define BCASE       break; case
 #define NCASE       goto next; case
-#define S0          stk[sp]
-#define S1          stk[sp-1]
+#define TOS         stk[sp]
+#define NOS         stk[sp-1]
 #define MEMB(x)     mem[(x)]
 #define CELL_SZ     sizeof(cell_t)
 #define BTW(n,l,h) ((l<=n)&(n<=h))
@@ -120,8 +120,8 @@ void sysOP(cell_t op) {
         BCASE MEMSZ:  push(MEM_SZ);
         BCASE IMM:    { de_t *dp=(de_t*)L; dp->f = 2; }
         BCASE INL:    { de_t *dp=(de_t*)L; dp->f = 4; }
-        BCASE SEQ:    t=pop(); S0=strEq((char *)S0, (char*)t);
-        BCASE SLEN:   S0=strLen((char*)S0);
+        BCASE SEQ:    t=pop(); TOS=strEq((char *)TOS, (char*)t);
+        BCASE SLEN:   TOS=strLen((char*)TOS);
         BCASE SCPY:   t=pop(); n=pop(); strCpy((char*)t, (char*)n);
         BCASE NXTWD:  nextWord(); push((cell_t)wd);
         BCASE CLK:    push(clock());
@@ -136,8 +136,8 @@ void run(byte *pc) {
     switch(*(pc++)) {
         case  JUMP: pc = (byte*)GetNumAt(pc); 
         NCASE RET:  if (0 < rsp) { pc = (byte*)rpop(); } else { return; }
-        NCASE JMPZ: if (S0 == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
-        NCASE JMPL0: if (S0 < 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE JMPZ: if (TOS == 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
+        NCASE JMPL0: if (TOS < 0) { pc = (byte*)GetNumAt(pc); } else { pc+=CELL_SZ; }
         NCASE CALL: t=GetNumAt(pc); pc += CELL_SZ; if (*pc != RET) { rpush((cell_t)pc); }
                     pc = (byte*)t;
         NCASE ACSTORE: *(byte*)A = (byte)pop();         // NON-standard, !AC 
@@ -147,25 +147,25 @@ void run(byte *pc) {
         NCASE AATINC: push(GetNumAt(A++));              // @A+
         NCASE LIT: push(GetNumAt(pc)); pc += CELL_SZ;   // Literal (CELL Sized)
         NCASE AAT: push(GetNumAt((byte*)A));            // @A
-        NCASE STORE: SetNumAt((byte*)S0,S1); sp-=2;     // NON-standard, !
+        NCASE STORE: SetNumAt((byte*)TOS,NOS); sp-=2;   // NON-standard, !
         NCASE ASTOREINC: SetNumAt((byte*)(A++),pop());  // !A+
-        NCASE FETCH: S0 = GetNumAt((byte*)S0);          // NON-standard, FORTH @
+        NCASE FETCH: TOS = GetNumAt((byte*)TOS);        // NON-standard, FORTH @
         NCASE ASTORE: SetNumAt((byte*)A, pop());        // !A
-        NCASE COM: S0 = ~S0;                            // COM
-        NCASE TIMES2: S0 *= 2;                          // 2+
-        NCASE DIV2: S0 /= 2;                            // 2/
-        NCASE MULT: t=pop(); S0 *= t;                   // NON-standard, FORTH *
-        NCASE XOR: t=pop(); S0 ^= t;                    // XOR
-        NCASE AND: t=pop(); S0 &= t;                    // AND
-        NCASE DEC: S0--;                                // Unused, FORTH 1-
-        NCASE ADD: t=pop(); S0 += t;                    // +
+        NCASE COM: TOS = ~TOS;                          // COM
+        NCASE TIMES2: TOS *= 2;                         // 2*
+        NCASE DIV2: TOS /= 2;                           // 2/
+        NCASE MULT: t=pop(); TOS *= t;                  // NON-standard, FORTH *
+        NCASE XOR: t=pop(); TOS ^= t;                   // XOR
+        NCASE AND: t=pop(); TOS &= t;                   // AND
+        NCASE DEC: TOS--;                               // Unused, FORTH 1-
+        NCASE ADD: t=pop(); TOS += t;                   // +
         NCASE POPR: push(rpop());                       // R>
         NCASE AVALUE: push(A);                          // A
-        NCASE DUP:  t=S0; push(t);                      // DUP
-        NCASE OVER: t=S1; push(t);                      // OVER
+        NCASE DUP:  t=TOS; push(t);                     // DUP
+        NCASE OVER: t=NOS; push(t);                     // OVER
         NCASE PUSHR: rpush(pop());                      // >R
         NCASE TOA: A = pop();                           // >A
-        NCASE INC: S0++;                                // NON-standard, 1+
+        NCASE INC: TOS++;                               // NON-standard, 1+
         NCASE DROP: sp = (0<sp) ? sp-1: 0;              // DROP
         goto next;
         default: printf("-ir:%u?-",*(pc-1)); return;
@@ -187,7 +187,7 @@ int parseNum(const char *cp) {
 
 int isNum(const char *cp) {
     if (parseNum(cp)) {
-        if (BTW(S0,0,127)) { CComma(LIT1); CComma(pop()); }
+        if (BTW(TOS,0,127)) { CComma(LIT1); CComma(pop()); }
         else { CComma(LIT); Comma(pop()); }
         return 1;
     }
